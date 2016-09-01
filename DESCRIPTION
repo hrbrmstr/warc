@@ -1,0 +1,24 @@
+Package: warc
+Type: Package
+Title: Tools to Work with the Web Archive Ecosystem
+Version: 0.1.0
+Date: 2016-09-01
+Author: Bob Rudis (@hrbrmstr)
+Maintainer: Bob Rudis <bob@rud.is>
+Description: warc description goes here
+URL: http://github.com/hrbrmstr/warc
+BugReports: https://github.com/hrbrmstr/warc/issues
+License: AGPL
+Suggests:
+    testthat
+Depends:
+    R (>= 3.0.0)
+Imports:
+    purrr,
+    dplyr,
+    stringi,
+    readr,
+    Rcpp,
+    Rcompression
+RoxygenNote: 5.0.1
+LinkingTo: Rcpp

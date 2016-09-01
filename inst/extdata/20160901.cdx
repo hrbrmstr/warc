@@ -1,0 +1,10 @@
+ CDX a b a m s k r M V g u
+https://rud.is/ 20160901180337 https://rud.is/ text/html 200  - - 1025 20160901-00000.warc.gz <urn:uuid:28121A43-212E-4186-ABE7-47C9DBE886D4>
+https://rapid7.com/ 20160901180340 https://rapid7.com/ text/html 301  https://www.rapid7.com/ - 3833 20160901-00000.warc.gz <urn:uuid:7260D8C5-28A9-4783-B002-0A309E76E786>
+https://www.rapid7.com/ 20160901180342 https://www.rapid7.com/ text/html 200  - - 5012 20160901-00000.warc.gz <urn:uuid:12503A4B-2EB2-41DE-8AC4-E568500C1A89>
+https://github.com/ 20160901180344 https://github.com/ text/html 200  - - 17982 20160901-00000.warc.gz <urn:uuid:5D582616-15A3-4774-970C-D1C1576C2F8D>
+https://r-project.org/ 20160901180346 https://r-project.org/ text/html 301  https://www.r-project.org/ - 26783 20160901-00000.warc.gz <urn:uuid:9EB1B94E-A929-4B5E-AE10-FB54C2E7308B>
+https://www.r-project.org/ 20160901180348 https://www.r-project.org/ text/html 200  - - 27872 20160901-00000.warc.gz <urn:uuid:1AA72D54-931D-4087-8867-35959F9CB415>
+https://rstudio.com/ 20160901180349 https://rstudio.com/ text/html 302  https://www.rstudio.com/ - 30937 20160901-00000.warc.gz <urn:uuid:D78F956E-98CA-49E5-B833-AEAF6A71122B>
+https://www.rstudio.com/ 20160901180350 https://www.rstudio.com/ text/html 200  - - 31915 20160901-00000.warc.gz <urn:uuid:5ABB72DC-196E-4879-89DA-17C7E8AEF800>
+https://stackoverflow.com/ 20160901180353 https://stackoverflow.com/ text/html 200  - - 66704 20160901-00000.warc.gz <urn:uuid:25D87C72-FE67-447F-ADFD-02CC662786CB>
