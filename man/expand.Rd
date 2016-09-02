@@ -2,16 +2,20 @@
 % Please edit documentation in R/utils.r
 \name{expand}
 \alias{expand}
-\title{Expand a compressed buffer}
+\title{Expand a compressed raw buffer}
 \usage{
 expand(buffer, size = length(buffer) * 10)
 }
 \arguments{
-\item{buffer}{buffer}
+\item{buffer}{gz compressed buffer to expand}
 
-\item{size}{size}
+\item{size}{estimated size of the inflated buffer}
 }
 \description{
-Expand a compressed buffer
+Expand a compressed raw buffer
+}
+\note{
+Guess \code{size} well since this will fail if \code{size}
+    is not large enough to hold the uncompressed output.
 }
 

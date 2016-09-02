@@ -6,6 +6,7 @@ output: rmarkdown::github_document
 
 The following functions are implemented:
 
+- `expand`:	Expand a compressed raw buffer
 - `read_cdx`:	Read a WARC CDX index file
 - `read_warc_entry`:	Read a WARC entry from a WARC file
 - `warc_headers`:	Extract WARC headers from a WARC response object

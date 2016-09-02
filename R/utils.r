@@ -1,7 +1,9 @@
-#' Expand a compressed buffer
+#' Expand a compressed raw buffer
 #'
-#' @param buffer buffer
-#' @param size size
+#' @param buffer gz compressed buffer to expand
+#' @param size estimated size of the inflated buffer
+#' @note Guess \code{size} well since this will fail if \code{size}
+#'     is not large enough to hold the uncompressed output.
 #' @export
 expand <- function(buffer, size=length(buffer)*10) {
   if (typeof(buffer) == "raw") {

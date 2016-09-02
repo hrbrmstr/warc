@@ -3,6 +3,7 @@
 
 The following functions are implemented:
 
+-   `expand`: Expand a compressed raw buffer
 -   `read_cdx`: Read a WARC CDX index file
 -   `read_warc_entry`: Read a WARC entry from a WARC file
 -   `warc_headers`: Extract WARC headers from a WARC response object
@@ -115,7 +116,7 @@ library(testthat)
 date()
 ```
 
-    ## [1] "Fri Sep  2 09:50:26 2016"
+    ## [1] "Fri Sep  2 10:01:09 2016"
 
 ``` r
 test_dir("tests/")
