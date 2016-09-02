@@ -18,7 +18,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // find_sequence
-double find_sequence(RawVector buffer, RawVector pattern);
+int find_sequence(RawVector buffer, RawVector pattern);
 RcppExport SEXP warc_find_sequence(SEXP bufferSEXP, SEXP patternSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;

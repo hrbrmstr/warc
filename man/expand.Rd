@@ -16,6 +16,6 @@ Expand a compressed raw buffer
 }
 \note{
 Guess \code{size} well since this will fail if \code{size}
-    is not large enough to hold the uncompressed output.
+  is not large enough to hold the uncompressed output.
 }
 

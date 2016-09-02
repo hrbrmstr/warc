@@ -5,6 +5,12 @@ gzuncompress <- function(r_source, r_guess_size) {
     .Call('warc_gzuncompress', PACKAGE = 'warc', r_source, r_guess_size)
 }
 
+#' Find the first occurrence (if any) of a sequence of raw bytes
+#' (\code{pattern}) in \code{buffer}.
+#'
+#' @param buffer vector to search in
+#' @param pattern sequence of bytes to look for
+#' @return index in \code{buffer} or \code{-1} if not found
 #' @export
 find_sequence <- function(buffer, pattern) {
     .Call('warc_find_sequence', PACKAGE = 'warc', buffer, pattern)

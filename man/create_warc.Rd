@@ -4,10 +4,11 @@
 \alias{create_warc}
 \title{Use wget to create a WARC archive for a URL list}
 \usage{
-create_warc(url_list, warc_path, user_agent = "r-warc", max_redirects = 5,
-  tries = 2, waitretry = 1, timeout = 5, warc_header = "r-warc",
-  warc_cdx = TRUE, warc_file = "r-warc", no_warc_digests = TRUE,
-  no_warc_keep_log = TRUE, warc_max_size = "1G", warc_tempdir = tempdir(),
+create_warc(url_list, warc_path = ".", user_agent = "r-warc",
+  max_redirects = 5, tries = 2, waitretry = 1, timeout = 5,
+  warc_header = "Source: R warc package", warc_cdx = TRUE,
+  warc_file = "r-warc", no_warc_digests = TRUE, no_warc_keep_log = TRUE,
+  warc_max_size = "1G", warc_tempdir = tempdir(), no_output = TRUE,
   .opts = NULL)
 }
 \arguments{
@@ -20,14 +21,32 @@ with one URL per line}
 
 \item{warc_file, nowarc_digests, no_warc_keep_log, warc_max_size, warc_tempdir}{options for \code{wget}}
 
-\item{.opts}{a \code{list} of other options for \code{wget}. Use long-argument names replacing
-\code{-} with \code{_} and using \code{TRUE} or \code{FALSE} for boolean arguments.}
+\item{no_output}{should the URL content associated with each URL also be saved in
+individual files?}
+
+\item{.opts}{a character vector of other valid options for \code{wget} that will be appended
+to the \code{system2} call \code{args}.}
 }
 \description{
 \code{wget} must be available, on the system \code{PATH} and be compiled with
 WARC support.
 }
+\details{
+The defaults for the parameters do not "mirror" web sites but will follow a sane
+number of redirects and will grab the default content at the URLs in \code{url_list}.
+}
 \note{
-\code{Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US) AppleWebKit/533.20.25 (KHTML, like Gecko) Version/5.0.4 Safari/533.20.27}
+\code{"Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US) AppleWebKit/533.20.25 (KHTML, like Gecko) Version/5.0.4 Safari/533.20.27"}
+  is a good user agent to use for sites that are expecting a browser.
+}
+\examples{
+\dontrun{
+create_warc(c("http://rud.is/", "http://had.co.nz/",
+              "http://rstudio.com/", "http://rapid7.com/"),
+           "~/data/webarchive/example")
+}
+}
+\references{
+\url{http://www.archiveteam.org/index.php?title=Wget_with_WARC_output}
 }
 
