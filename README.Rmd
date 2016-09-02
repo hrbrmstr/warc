@@ -2,11 +2,13 @@
 output: rmarkdown::github_document
 ---
 
-`warc` : ...
+`warc` : Tools to Work with the Web Archive Ecosystem
 
 The following functions are implemented:
 
-The following data sets are included:
+- `read_cdx`:	Read a WARC CDX index file
+- `read_warc_entry`:	Read a WARC entry from a WARC file
+- `warc_headers`:	Extract WARC headers from a WARC response object
 
 ### Installation
 
@@ -20,17 +22,35 @@ options(width=120)
 
 ### Usage
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 library(warc)
+library(httr)
 
 # current verison
 packageVersion("warc")
 
+cdx <- read_cdx(system.file("extdata", "20160901.cdx", package="warc"))
+
+i <- 5
+
+p <- file.path(cdx$warc_path[i], cdx$file_name[i])
+st <- cdx$compressed_arc_file_offset[i]
+sz <- cdx$calc_compressed_warc_rec_size[i]
+
+entry <- read_warc_entry(p, st, sz)
+
+print(entry)
+
+print(warc_headers(entry))
+
+print(status_code(entry))
+
+print(http_type(entry))
 ```
 
 ### Test Results
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 library(warc)
 library(testthat)
 

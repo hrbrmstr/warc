@@ -26,6 +26,7 @@ read_warc_entry <- function(path, start, size, compressed=grepl("gz$", path)) {
 }
 
 #' Extract WARC headers from a WARC response object
+#'
 #' @param x WARC response object
 #' @return list of WARC headers
 #' @export
