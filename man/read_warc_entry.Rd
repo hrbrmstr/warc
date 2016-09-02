@@ -4,7 +4,8 @@
 \alias{read_warc_entry}
 \title{Read a WARC entry from a WARC file}
 \usage{
-read_warc_entry(path, start, size, compressed = grepl("gz$", path))
+read_warc_entry(path, start, size, compressed = grepl("gz$", path),
+  compressed_buffer_multiplier = 10)
 }
 \arguments{
 \item{path}{path to WARC file}
@@ -14,9 +15,24 @@ read_warc_entry(path, start, size, compressed = grepl("gz$", path))
 \item{size}{total size of WARC record}
 
 \item{compressed}{is WARC file compressed? (guessed by file name suffix)}
+
+\item{compressed_buffer_multipler}{if the WARC file is compressed the record
+will be inflated which requires guessing the buffer size for the expanded
+data. The default (after numerous tests) of \code{10x} the size of the
+compressed record seems to be the sweet spot, but you can override this
+value if you run into issues. The buffer is only temporary but is allocated
+across each call (just be aware that you're allocating moderately sized
+memory chunks eac time you call this).}
 }
 \description{
-Read a WARC entry from a WARC file
+Given the path to a WARC file (compressed or uncompressed) and the start/end
+positions of the WARC record, this function will produce an R object from the
+WARC record.
+}
+\details{
+Currently, the WARC \code{response} object is supported and the object
+returned is classed both \code{warc_response} and \code{httr::response}
+and the standard \code{httr} content functions will work with the object.
 }
 \examples{
 \dontrun{

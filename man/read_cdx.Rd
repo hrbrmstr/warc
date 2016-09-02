@@ -13,7 +13,7 @@ read_cdx(path, warc_path = dirname(path))
 to the location of the CDX file}
 }
 \description{
-Read a WARC CDX index file
+CDX files are used to index the content of WARC files.
 }
 \examples{
 \dontrun{

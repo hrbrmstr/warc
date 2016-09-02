@@ -1,9 +1,24 @@
 #' Read a WARC entry from a WARC file
 #'
+#' Given the path to a WARC file (compressed or uncompressed) and the start/end
+#' positions of the WARC record, this function will produce an R object from the
+#' WARC record.
+#'
+#' Currently, the WARC \code{response} object is supported and the object
+#' returned is classed both \code{warc_response} and \code{httr::response}
+#' and the standard \code{httr} content functions will work with the object.
+#'
 #' @param path path to WARC file
 #' @param start starting offset of WARC record
 #' @param size total size of WARC record
 #' @param compressed is WARC file compressed? (guessed by file name suffix)
+#' @param compressed_buffer_multipler if the WARC file is compressed the record
+#'   will be inflated which requires guessing the buffer size for the expanded
+#'   data. The default (after numerous tests) of \code{10x} the size of the
+#'   compressed record seems to be the sweet spot, but you can override this
+#'   value if you run into issues. The buffer is only temporary but is allocated
+#'   across each call (just be aware that you're allocating moderately sized
+#'   memory chunks eac time you call this).
 #' @export
 #' @examples \dontrun{
 #' cdx <- read_cdx(system.file("extdata", "20160901.cdx", package="warc"))
@@ -14,12 +29,13 @@
 #'
 #' (read_warc_entry(p, st, sz))
 #' }
-read_warc_entry <- function(path, start, size, compressed=grepl("gz$", path)) {
+read_warc_entry <- function(path, start, size, compressed=grepl("gz$", path),
+                            compressed_buffer_multiplier=10) {
 
   fil <- file(path, "rb")
   seek(fil, start)
   buffer <- readBin(fil, "raw", size)
-  if (compressed) buffer <- expand(buffer);
+  if (compressed) buffer <- expand(buffer, length(buffer)*compressed_buffer_multiplier);
   close(fil)
   process_entry(buffer)
 
@@ -46,19 +62,19 @@ process_entry <- function(buffer) {
 
   stri_split_fixed(warc_entries[-1], ": ", 2) %>%
     map(~setNames(list(.[2]), .[1])) %>%
-    flatten_df() %>%
-    type_convert() %>%
-    as.list() -> warc_headers
+    flatten_df() -> warc_headers
 
+  warc_headers <- suppressMessages(readr::type_convert(warc_headers))
+  warc_headers <- as.list(warc_headers)
   warc_headers <- httr::insensitive(warc_headers)
 
-  start <- pos+4+1
+  start <- pos+4
   size <- warc_headers$`Content-Length`[1]
 
   response <- buffer[start:length(buffer)]
 
   cpos <- find_sequence(response, charToRaw("\r\n\r\n"))
-  http_headers <- iconv(readBin(response[1:(cpos-1)], character()), to="UTF-8")
+  http_headers <- iconv(readBin(response[1:(cpos-1)], character()), sub="byte", to="UTF-8")
 
   headers <- stri_split_regex(http_headers, "\r?\n")[[1]]
 
@@ -69,19 +85,32 @@ process_entry <- function(buffer) {
 
   stri_split_fixed(headers[-1], ": ", 2) %>%
     map(~setNames(list(.[2]), .[1])) %>%
-    flatten_df() %>%
-    type_convert() %>%
-    as.list() -> headers
+    flatten_df() -> headers
 
+  headers <- as.list(headers)
   headers <- httr::insensitive(headers)
 
-  if (rawToChar(response[(length(response)-3):length(response)]) == "\r\n\r\n") {
-    from_end <- 4
-  } else {
-    from_end <- 0
+  if ((length(headers$date) > 0) && (!is.na(headers$date))) {
+    headers$date <- httr::parse_http_date(headers$date)
   }
 
-  content <- response[(cpos+4):(length(response)-from_end)]
+  if ((length(headers[["content-type"]]) > 0) && (headers[["content-type"]] == "")) {
+    headers["content-type"] <- "application/http"
+  }
+
+  if ((length(headers[["content-length"]]) > 0) && (headers[["content-length"]] == 0)) {
+    content <- raw()
+  } else {
+
+    if (rawToChar(response[(length(response)-3):length(response)]) == "\r\n\r\n") {
+      from_end <- 4
+    } else {
+      from_end <- 0
+    }
+
+    content <- response[(cpos+4):(length(response)-from_end)]
+
+  }
 
   ret <- list(url=warc_headers$`warc-target-uri`,
               status_code=status$status,
@@ -90,8 +119,10 @@ process_entry <- function(buffer) {
               headers=headers,
               content=content)
 
-  if (length(headers$date) > 0) {
-    ret$date <- httr::parse_http_date(headers$date)
+  if ((length(headers$date) > 0) && (!is.na(headers$date))) {
+    ret$date <- headers$date
+  } else {
+    ret$date <- as.POSIXct(NA)
   }
 
   class(ret) <- c("warc_response", "response", class(ret))

@@ -10,6 +10,7 @@ The following functions are implemented:
 - `read_cdx`:	Read a WARC CDX index file
 - `read_warc_entry`:	Read a WARC entry from a WARC file
 - `warc_headers`:	Extract WARC headers from a WARC response object
+- `create_warc`	Use wget to create a WARC archive for a URL list
 
 ### Installation
 

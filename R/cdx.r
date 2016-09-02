@@ -1,5 +1,7 @@
 #' Read a WARC CDX index file
 #'
+#' CDX files are used to index the content of WARC files.
+#'
 #' @param path path to CDX file
 #' @param warc_path path to the WARC files referenced in \code{path}. Defaults to
 #'     to the location of the CDX file
@@ -48,6 +50,8 @@ read_cdx <- function(path, warc_path=dirname(path)) {
 
 }
 
+#' Calculate the size of the final WARC record in the file
+#' @noRd
 calc_size <- function(x, warc_path) {
 
   fsiz <- file.size(file.path(warc_path, x$file_name[1]))

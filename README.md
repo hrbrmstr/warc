@@ -7,6 +7,7 @@ The following functions are implemented:
 -   `read_cdx`: Read a WARC CDX index file
 -   `read_warc_entry`: Read a WARC entry from a WARC file
 -   `warc_headers`: Extract WARC headers from a WARC response object
+-   `create_warc` Use wget to create a WARC archive for a URL list
 
 ### Installation
 
@@ -116,7 +117,7 @@ library(testthat)
 date()
 ```
 
-    ## [1] "Fri Sep  2 10:01:09 2016"
+    ## [1] "Fri Sep  2 16:28:31 2016"
 
 ``` r
 test_dir("tests/")

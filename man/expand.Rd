@@ -4,7 +4,7 @@
 \alias{expand}
 \title{Expand a compressed raw buffer}
 \usage{
-expand(buffer, size = length(buffer) * 10)
+expand(buffer, size = length(buffer) * 20)
 }
 \arguments{
 \item{buffer}{gz compressed buffer to expand}
