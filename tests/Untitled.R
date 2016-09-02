@@ -6,10 +6,9 @@ library(httr)
 
 cdx <- read_cdx(system.file("extdata", "20160901.cdx", package="warc"))
 
-# for (i in 1:nrow(cdx)) {
+for (i in 1:nrow(cdx)) {
 
-  i <- 7
-  cat(sprintf("===>%d\n", i))
+  cat(sprintf("\n\n===>%d\n\n", i))
 
   p <- file.path(cdx$warc_path[i], cdx$file_name[i])
   st <- cdx$compressed_arc_file_offset[i]
@@ -17,17 +16,16 @@ cdx <- read_cdx(system.file("extdata", "20160901.cdx", package="warc"))
 
   entry <- read_warc_entry(p, st, sz)
 
-# }
+  print(entry)
+  print(warc_headers(entry))
+  print(content(entry, as="raw"))
+  print(content(entry, as="parsed", encoding="UTF-8"))
+  print(content(entry, as="text", encoding="UTF-8"))
+  print(headers(entry))
+  print(status_code(entry))
+  print(http_type(entry))
+  print(http_error(entry))
+
+}
 
 
-# str(entry)
-#
-# warc_headers(entry)
-#
-# text_content(entry)
-# parsed_content(entry)
-# content(entry, as="raw")
-# headers(entry)
-# status_code(entry)
-# http_type(entry)
-# http_error(entry)

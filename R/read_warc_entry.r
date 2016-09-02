@@ -31,8 +31,6 @@ read_warc_entry <- function(path, start, size, compressed=grepl("gz$", path)) {
 #' @export
 warc_headers <- function(x) { x$warc_header }
 
-#iconv(readBin(content, character()), from = encoding, to = "UTF-8")
-
 process_entry <- function(buffer) {
 
   pos <- find_sequence(buffer, charToRaw("\r\n\r\n"))
@@ -90,6 +88,11 @@ process_entry <- function(buffer) {
               status=status,
               headers=headers,
               content=content)
+
+  if (length(headers$date) > 0) {
+    ret$date <- httr::parse_http_date(headers$date)
+  }
+
   class(ret) <- c("warc_response", "response", class(ret))
   ret
 
