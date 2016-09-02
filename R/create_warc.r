@@ -1,7 +1,13 @@
 #' Use wget to create a WARC archive for a URL list
 #'
-#' \code{wget} must be available, on the system \code{PATH} and be compiled with
-#' WARC support.
+#' Newer versions of \code{wget} are designed to support capturing of or
+#' mirroring a list of URLs into a WARC archive. \code{wget} is tailor-made
+#' for gathering web content and if you have to scrape a large number of
+#' sites it's far more efficient and kind to the web site owners to save
+#' the content to a WARC archive for future use.
+#'
+#' \code{wget} must be available on the system \code{PATH} and be compiled with
+#' WARC support to use this function.
 #'
 #' The defaults for the parameters do not "mirror" web sites but will follow a sane
 #' number of redirects and will grab the default content at the URLs in \code{url_list}.
@@ -23,6 +29,7 @@
 #' create_warc(c("http://rud.is/", "http://had.co.nz/",
 #'               "http://rstudio.com/", "http://rapid7.com/"),
 #'            "~/data/webarchive/example")
+#' cdx <- read_cdx("~/data/webarchive/example/r-warc.cdx")
 #' }
 create_warc <- function(url_list, warc_path=".", user_agent="r-warc", max_redirects=5,
                         tries=2, waitretry=1, timeout=5, warc_header="Source: R warc package",
