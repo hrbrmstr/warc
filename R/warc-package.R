@@ -4,8 +4,9 @@
 #' @docType package
 #' @author Bob Rudis (@@hrbrmstr)
 #' @import purrr readr
-#' @importFrom dplyr tbl_df data_frame left_join mutate filter select
-#' @import stringi Rcompression
+#' @importFrom dplyr tbl_df data_frame left_join mutate filter select group_by do ungroup
+#' @import stringi
+#' @importFrom httr insensitive
 #' @useDynLib warc
 #' @importFrom Rcpp sourceCpp
 NULL

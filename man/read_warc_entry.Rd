@@ -21,11 +21,12 @@ Read a WARC entry from a WARC file
 \examples{
 \dontrun{
 cdx <- read_cdx(system.file("extdata", "20160901.cdx", package="warc"))
+i <- 1
 p <- file.path(cdx$warc_path[i], cdx$file_name[i])
 st <- cdx$compressed_arc_file_offset[i]
 sz <- cdx$calc_compressed_warc_rec_size[i]
 
-cat(read_warc_entry(p, st, sz))
+(read_warc_entry(p, st, sz))
 }
 }
 

@@ -50,14 +50,14 @@ read_cdx <- function(path, warc_path=dirname(path)) {
 
 calc_size <- function(x, warc_path) {
 
-  finf <- file.info(file.path(warc_path, x$file_name[1]))
+  fsiz <- file.size(file.path(warc_path, x$file_name[1]))
 
   x$calc_compressed_warc_rec_size <-
     c(x$compressed_arc_file_offset[-1], 0) -
     x$compressed_arc_file_offset + 1
 
   x$calc_compressed_warc_rec_size[nrow(x)] <-
-    as.numeric(finf[["size"]]) - x$compressed_arc_file_offset[nrow(x)] + 1
+    fsiz - x$compressed_arc_file_offset[nrow(x)] + 1
 
   x
 

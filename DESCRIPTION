@@ -19,6 +19,6 @@ Imports:
     stringi,
     readr,
     Rcpp,
-    Rcompression
+    httr
 RoxygenNote: 5.0.1
 LinkingTo: Rcpp

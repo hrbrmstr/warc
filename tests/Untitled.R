@@ -1,28 +1,33 @@
-cdx <- read_cdx("~/Desktop/warc/20160901.cdx")
-
-i <- 3
-(p <- file.path(cdx$warc_path[i], cdx$file_name[i]))
-(st <- cdx$compressed_arc_file_offset[i])
-(sz <- cdx$calc_compressed_warc_rec_size[i])
-
-buffer <- read_warc_entry(p, st, sz)
-
-
 library(stringi)
 library(purrr)
+library(readr)
+library(xml2)
+library(httr)
 
-pos <- stri_locate_first_regex(buffer, "\r\n\r\n")
-warc_info <- substr(buffer, 1, pos-1)
-warc_entries <- stri_split_regex(warc_info, "\r\n")[[1]]
+cdx <- read_cdx(system.file("extdata", "20160901.cdx", package="warc"))
 
-if (substr(warc_entries[1], 1, 5) != "WARC/") { message("blargh") }
+# for (i in 1:nrow(cdx)) {
 
-stri_split_fixed(warc_entries[-1], ": ", 2) %>%
-  map(~setNames(list(.[2]), .[1])) %>%
-  flatten_df() -> warc_header
+  i <- 7
+  cat(sprintf("===>%d\n", i))
 
-start <- pos[,2]+1
-size <- warc_header$`Content-Length`[1]
+  p <- file.path(cdx$warc_path[i], cdx$file_name[i])
+  st <- cdx$compressed_arc_file_offset[i]
+  sz <- cdx$calc_compressed_warc_rec_size[i]
 
-content <- substr(buffer, start, size)
+  entry <- read_warc_entry(p, st, sz)
 
+# }
+
+
+# str(entry)
+#
+# warc_headers(entry)
+#
+# text_content(entry)
+# parsed_content(entry)
+# content(entry, as="raw")
+# headers(entry)
+# status_code(entry)
+# http_type(entry)
+# http_error(entry)
