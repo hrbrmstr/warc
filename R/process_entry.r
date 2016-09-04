@@ -18,6 +18,16 @@ process_entry <- function(buffer) {
   warc_headers <- as.list(warc_headers)
   warc_headers <- httr::insensitive(warc_headers)
 
+  if (length(warc_headers[["warc-target-uri"]]) > 0) {
+    if (substr(warc_headers$`warc-target-uri`, 1, 1) == "<") {
+      if (substr(warc_headers$`warc-target-uri`,
+                 nchar(warc_headers$`warc-target-uri`),
+                 nchar(warc_headers$`warc-target-uri`)) == ">") {
+        warc_headers$`warc-target-uri` <- gsub("(^<|>$)", "", warc_headers$`warc-target-uri`)
+      }
+    }
+  }
+
   warc_type <- tolower(warc_headers[["warc-type"]])
 
   if (warc_type == "response") {
