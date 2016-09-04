@@ -19,3 +19,15 @@ expand <- function(buffer, size=length(buffer)*20) {
 #' @return list of WARC headers
 #' @export
 warc_headers <- function(x) { x$warc_header }
+
+#' @export
+remove_brackets <- function(x) {
+  map_chr(x, function(y) {
+    if ((substr(y, 1, 1) == "<") &
+        (substr(y, nchar(y), nchar(y)) == ">")) {
+      gsub("(^<|>$)", "", y)
+    } else {
+      y
+    }
+  })
+}

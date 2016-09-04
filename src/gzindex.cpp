@@ -25,14 +25,27 @@ using namespace Rcpp;
 
 #define WARM_START 1024
 
-//"/Users/bob/Desktop/bbb/r-warc-00000.warc.gz"
-//
+char *no_space(char *str) {
+  int ct=0;
+  for (int i=0; str[i]; i++)
+    if (str[i] != ' ') str[ct++] = str[i];
+    str[ct] = '\0';
+  return(str);
+}
 
-//' @export
 // [[Rcpp::export]]
-CharacterVector mkcdxgz(std::string path) {
+CharacterVector int_create_cdx_from_warc(std::string warc_path,
+                                         std::string field_spec,
+                                         std::string cdx_path) {
+  return(CharacterVector());
+}
 
-  std::string full_path(R_ExpandFileName(path.c_str()));
+// [[Rcpp::export]]
+CharacterVector int_create_cdx_from_gzwarc(std::string warc_path,
+                                           std::string field_spec,
+                                           std::string cdx_path) {
+
+  std::string full_path(R_ExpandFileName(warc_path.c_str()));
 
   Rcpp::Environment baseEnv = Rcpp::Environment::base_env();
   Rcpp::Function basename = baseEnv["basename"];
@@ -57,17 +70,24 @@ CharacterVector mkcdxgz(std::string path) {
     char warc_type[KEY_VAL_MAX];
     char urn[KEY_VAL_MAX];
     char target_uri[KEY_VAL_MAX];
+    char mime_type[KEY_VAL_MAX];
+    char redirect[KEY_VAL_MAX];
     z_off_t warc_offset = 0;
     struct tm ts;
     char *cp;
     char warc_time[TIME_MAX];
     char out_buf[BUF_LEN];
+    char status[5];
+    z_off_t pre, post;
 
-    out.push_back(" CDX a b m V g u\n");
+    out.push_back(" CDX s a b r m V g u");
 
     while ((line=gzgets(gzf, buf, BUF_LEN)) != NULL) {
 
       strcpy(target_uri, "-");
+      strcpy(status, "-");
+      strcpy(mime_type, "-");
+      strcpy(redirect, "-");
 
       buf[strcspn(buf, "\r\n")] = '\0';
       //printf("[%s] [%d]\n", buf, j++);
@@ -88,6 +108,7 @@ CharacterVector mkcdxgz(std::string path) {
             if (content_length == UINTMAX_MAX && errno == ERANGE)  exit(1);
           } else if (strcmp("WARC-Type", key) == 0) {
             strncpy(warc_type, val, KEY_VAL_MAX);
+            strncpy(mime_type ,warc_type, KEY_VAL_MAX);
           } else if (strcmp("WARC-Record-ID", key) == 0) {
             strncpy(urn, val, KEY_VAL_MAX);
           } else if (strcmp("WARC-Target-URI", key) == 0) {
@@ -105,8 +126,41 @@ CharacterVector mkcdxgz(std::string path) {
 
       }
 
-      res = sprintf(out_buf, "%s %s warc/%s %ld %s %s\n",
-                    target_uri, warc_time, warc_type, warc_offset, warc_file, urn);
+      if (strcmp("response", warc_type) == 0) {
+
+        pre = gztell(gzf);
+
+        line = gzgets(gzf, buf, BUF_LEN);
+        buf[strcspn(buf, "\r\n")] = '\0';
+        strtok(buf, " ");
+        strcpy(status, strtok(NULL, " "));
+
+        while(strcmp("\r\n", line=gzgets(gzf, buf, BUF_LEN)) != 0) {
+          buf[strcspn(buf, "\r\n")] = '\0';
+          char *v = strnstr(buf, ": ", strlen(buf));
+          if (v) {
+            strncpy(val, (v+2), strlen(buf));
+            key = strtok(buf, ":");
+            if (strcmp("Content-Type", key) == 0) {
+              strncpy(mime_type, val, KEY_VAL_MAX);
+              no_space(mime_type);
+            } else if (strcmp("Location", key) == 0) {
+              strncpy(redirect, val, KEY_VAL_MAX);
+            }
+          }
+        }
+
+        post = gztell(gzf);
+
+        gzseek(gzf, (content_length - (post-pre+1)), SEEK_CUR);
+
+      } else {
+        gzseek(gzf, content_length, SEEK_CUR);
+      }
+
+      res = sprintf(out_buf, "%s %s %s %s %s %ld %s %s",
+                    status, target_uri, warc_time, redirect,
+                    mime_type, warc_offset, warc_file, urn);
       if (res<0) {
         Rcpp::warning("Unable to generate CDX record");
         return(CharacterVector());
@@ -115,12 +169,8 @@ CharacterVector mkcdxgz(std::string path) {
 
       warc_offset = gzoffset(gzf);
 
-      gzseek(gzf, content_length, SEEK_CUR);
-
       line = gzgets(gzf, buf, BUF_LEN);
       line = gzgets(gzf, buf, BUF_LEN);
-
-      //printf("\n");
 
     }
 

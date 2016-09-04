@@ -41,19 +41,47 @@ read_cdx <- function(path, warc_path=dirname(path)) {
   df <- suppressMessages(readr::type_convert(df))
 
   if ("compressed_arc_file_offset" %in% colnames(df)) {
-
     if (!("compressed_record_size" %in% colnames(df))) {
-
       group_by(df, file_name) %>%
         do(calc_size(., warc_path)) %>%
         ungroup() -> df
-
     }
+  }
 
+  if ("response_code" %in% colnames(df)) {
+    df <- mutate(df, response_code=ifelse(response_code==0, NA, response_code))
+  }
+
+  if ("original_url" %in% colnames(df)) {
+    df <- mutate(df, original_url=remove_brackets(original_url))
   }
 
   class(df) <- c("cdx", class(df))
   df
+
+}
+
+#' Display a CDX object
+#' @export
+print.cdx <- function(x, ...) {
+
+  fields <- left_join(data_frame(short_name=colnames(x)), field_trans, by="short_name")
+  fields <- mutate(fields, description=ifelse(is.na(description), "", description))
+
+  cat(sprintf("# A CDX WARC index with %s records and the following fields:\n\n",
+              scales::comma(nrow(x))))
+
+  max_sn <- max(map_int(fields$short_name, nchar))
+
+  for (i in 1:nrow(fields)) {
+    cat(sprintf("%s: %s\n",
+            stri_pad_left(fields$short_name[i], max_sn),
+            fields$description[i]))
+  }
+
+  cat("\n\n")
+
+  dplyr::glimpse(x)
 
 }
 
