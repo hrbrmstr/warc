@@ -5,6 +5,17 @@
 
 using namespace Rcpp;
 
+// mkcdxgz
+CharacterVector mkcdxgz(std::string path);
+RcppExport SEXP warc_mkcdxgz(SEXP pathSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< std::string >::type path(pathSEXP);
+    __result = Rcpp::wrap(mkcdxgz(path));
+    return __result;
+END_RCPP
+}
 // gzuncompress
 SEXP gzuncompress(SEXP r_source, SEXP r_guess_size);
 RcppExport SEXP warc_gzuncompress(SEXP r_sourceSEXP, SEXP r_guess_sizeSEXP) {

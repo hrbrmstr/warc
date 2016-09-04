@@ -3,6 +3,7 @@
 export(create_warc)
 export(expand)
 export(find_sequence)
+export(mkcdxgz)
 export(read_cdx)
 export(read_warc_entry)
 export(warc_headers)
