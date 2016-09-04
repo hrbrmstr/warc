@@ -6,29 +6,29 @@
 using namespace Rcpp;
 
 // int_create_cdx_from_warc
-CharacterVector int_create_cdx_from_warc(std::string warc_path, std::string field_spec, std::string cdx_path);
-RcppExport SEXP warc_int_create_cdx_from_warc(SEXP warc_pathSEXP, SEXP field_specSEXP, SEXP cdx_pathSEXP) {
+void int_create_cdx_from_warc(std::string warc_path, std::string warc_record_types, std::string field_spec, std::string cdx_path);
+RcppExport SEXP warc_int_create_cdx_from_warc(SEXP warc_pathSEXP, SEXP warc_record_typesSEXP, SEXP field_specSEXP, SEXP cdx_pathSEXP) {
 BEGIN_RCPP
-    Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
     Rcpp::traits::input_parameter< std::string >::type warc_path(warc_pathSEXP);
+    Rcpp::traits::input_parameter< std::string >::type warc_record_types(warc_record_typesSEXP);
     Rcpp::traits::input_parameter< std::string >::type field_spec(field_specSEXP);
     Rcpp::traits::input_parameter< std::string >::type cdx_path(cdx_pathSEXP);
-    __result = Rcpp::wrap(int_create_cdx_from_warc(warc_path, field_spec, cdx_path));
-    return __result;
+    int_create_cdx_from_warc(warc_path, warc_record_types, field_spec, cdx_path);
+    return R_NilValue;
 END_RCPP
 }
 // int_create_cdx_from_gzwarc
-CharacterVector int_create_cdx_from_gzwarc(std::string warc_path, std::string field_spec, std::string cdx_path);
-RcppExport SEXP warc_int_create_cdx_from_gzwarc(SEXP warc_pathSEXP, SEXP field_specSEXP, SEXP cdx_pathSEXP) {
+void int_create_cdx_from_gzwarc(std::string warc_path, std::string warc_record_types, std::string field_spec, std::string cdx_path);
+RcppExport SEXP warc_int_create_cdx_from_gzwarc(SEXP warc_pathSEXP, SEXP warc_record_typesSEXP, SEXP field_specSEXP, SEXP cdx_pathSEXP) {
 BEGIN_RCPP
-    Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
     Rcpp::traits::input_parameter< std::string >::type warc_path(warc_pathSEXP);
+    Rcpp::traits::input_parameter< std::string >::type warc_record_types(warc_record_typesSEXP);
     Rcpp::traits::input_parameter< std::string >::type field_spec(field_specSEXP);
     Rcpp::traits::input_parameter< std::string >::type cdx_path(cdx_pathSEXP);
-    __result = Rcpp::wrap(int_create_cdx_from_gzwarc(warc_path, field_spec, cdx_path));
-    return __result;
+    int_create_cdx_from_gzwarc(warc_path, warc_record_types, field_spec, cdx_path);
+    return R_NilValue;
 END_RCPP
 }
 // gzuncompress

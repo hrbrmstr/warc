@@ -1,6 +1,9 @@
 #include <Rcpp.h>
 using namespace Rcpp;
 
+#include <iostream>
+#include <fstream>
+
 #include <zlib.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -23,27 +26,26 @@ using namespace Rcpp;
 #define KEY_VAL_MAX 256
 #define TIME_MAX 32
 
-#define WARM_START 1024
-
 char *no_space(char *str) {
   int ct=0;
   for (int i=0; str[i]; i++)
     if (str[i] != ' ') str[ct++] = str[i];
     str[ct] = '\0';
-  return(str);
+    return(str);
 }
 
 // [[Rcpp::export]]
-CharacterVector int_create_cdx_from_warc(std::string warc_path,
-                                         std::string field_spec,
-                                         std::string cdx_path) {
-  return(CharacterVector());
+void int_create_cdx_from_warc(std::string warc_path,
+                              std::string warc_record_types,
+                              std::string field_spec,
+                              std::string cdx_path) {
 }
 
 // [[Rcpp::export]]
-CharacterVector int_create_cdx_from_gzwarc(std::string warc_path,
-                                           std::string field_spec,
-                                           std::string cdx_path) {
+void int_create_cdx_from_gzwarc(std::string warc_path,
+                                std::string warc_record_types,
+                                std::string field_spec,
+                                std::string cdx_path) {
 
   std::string full_path(R_ExpandFileName(warc_path.c_str()));
 
@@ -57,8 +59,10 @@ CharacterVector int_create_cdx_from_gzwarc(std::string warc_path,
   int res;
   char buf[BUF_LEN];
 
-  std::vector<std::string> out;
-  out.reserve(WARM_START);
+  Rcout << "Creating CDX file" << std::endl;
+  Rcout << cdx_path << std::endl;
+
+  std::ofstream cdx_file(cdx_path);
 
   if (gzf) {
 
@@ -80,7 +84,7 @@ CharacterVector int_create_cdx_from_gzwarc(std::string warc_path,
     char status[5];
     z_off_t pre, post;
 
-    out.push_back(" CDX s a b r m V g u");
+    cdx_file << " CDX a b m s r V g u\n";
 
     while ((line=gzgets(gzf, buf, BUF_LEN)) != NULL) {
 
@@ -90,7 +94,6 @@ CharacterVector int_create_cdx_from_gzwarc(std::string warc_path,
       strcpy(redirect, "-");
 
       buf[strcspn(buf, "\r\n")] = '\0';
-      //printf("[%s] [%d]\n", buf, j++);
 
       while(strcmp("\r\n", line=gzgets(gzf, buf, BUF_LEN)) != 0) {
 
@@ -101,7 +104,6 @@ CharacterVector int_create_cdx_from_gzwarc(std::string warc_path,
 
           strncpy(val, (v+2), strlen(buf));
           key = strtok(buf, ":");
-          //printf("[%s] [%s]\n",key, val);
 
           if (strcmp("Content-Length", key) == 0) {
             content_length = strtoumax(val, NULL, 10);
@@ -154,18 +156,19 @@ CharacterVector int_create_cdx_from_gzwarc(std::string warc_path,
 
         gzseek(gzf, (content_length - (post-pre+1)), SEEK_CUR);
 
+        res = sprintf(out_buf, "%s %s %s %s %s %ld %s %s\n",
+                      target_uri, warc_time, mime_type, status,
+                      redirect, warc_offset, warc_file, urn);
+        if (res<0) {
+          Rcpp::warning("Unable to generate CDX record");
+          return;
+        }
+
+        cdx_file << out_buf;
+
       } else {
         gzseek(gzf, content_length, SEEK_CUR);
       }
-
-      res = sprintf(out_buf, "%s %s %s %s %s %ld %s %s",
-                    status, target_uri, warc_time, redirect,
-                    mime_type, warc_offset, warc_file, urn);
-      if (res<0) {
-        Rcpp::warning("Unable to generate CDX record");
-        return(CharacterVector());
-      }
-      out.push_back(std::string(out_buf));
 
       warc_offset = gzoffset(gzf);
 
@@ -176,9 +179,8 @@ CharacterVector int_create_cdx_from_gzwarc(std::string warc_path,
 
   }
 
+  cdx_file.close();
   if (gzf) gzclose(gzf);
   if (fp) fclose(fp);
-
-  return(wrap(out));
 
 }

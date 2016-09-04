@@ -5,7 +5,7 @@
 \title{Create a CDX from a WARC file}
 \usage{
 create_cdx(warc_path, warc_record_types = "response",
-  field_spec = "abmskrMVgu", cdx_path)
+  field_spec = "abmsrVgu", cdx_path)
 }
 \arguments{
 \item{warc_path}{path to the WARC file to index}
@@ -29,7 +29,7 @@ to work.)
 \details{
 Use an atomic character vector of single character CDX field specifications
 in the order you want them in the CDX file. The default value
-"\code{abmskrMVgu}" is taken from the defaults used by \code{wget} in
+"\code{abmsrVgu}" is taken from the defaults used by \code{wget} in
 "WARC mode" and will output the:
 
 \itemize{
@@ -37,9 +37,7 @@ in the order you want them in the CDX file. The default value
 \item{date}
 \item{mime type of original document}
 \item{response code}
-\item{new style checksum}
 \item{redirect}
-\item{meta tags (AIF)}
 \item{compressed arc file offset}
 \item{file name}
 \item{URN (warc record id)}
@@ -48,8 +46,9 @@ in the order you want them in the CDX file. The default value
 in that order.
 }
 \note{
-Only "\code{response}" or "\code{all}" are currently supported values for
-  \code{warc_record_types}.
+Only "\code{response}" is the currently supported value for
+  \code{warc_record_types} and "\code{abmsrVgu}" is hardcoded (and it only indexes
+  gz WARC files...hey, it's alpha s/w).
 }
 \references{
 \url{https://iipc.github.io/warc-specifications/specifications/cdx-format/cdx-2015/}
