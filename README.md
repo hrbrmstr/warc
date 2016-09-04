@@ -1,8 +1,10 @@
 
-`warc` : Tools to Work with the Web Archive Ecosystem
+`warc` : Tools to Work with the Web Archive Ecosystem (WARC & CDX files)
 
 The following functions are implemented:
 
+-   `create_cdx`: Create a CDX from a WARC file
+-   `create_warc`: Use wget to create a WARC archive for a URL list
 -   `expand`: Expand a compressed raw buffer
 -   `read_cdx`: Read a WARC CDX index file
 -   `read_warc_entry`: Read a WARC entry from a WARC file
@@ -117,7 +119,7 @@ library(testthat)
 date()
 ```
 
-    ## [1] "Fri Sep  2 16:28:31 2016"
+    ## [1] "Sun Sep  4 16:26:16 2016"
 
 ``` r
 test_dir("tests/")
