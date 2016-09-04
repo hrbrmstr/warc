@@ -51,7 +51,7 @@ field_trans <-
       ),
       short_name = c(
         "canonized_url",
-        "newS_group",
+        "news_group",
         "rulespace_category",
         "compressed_dat_file_offset",
         "canonized_Frame",

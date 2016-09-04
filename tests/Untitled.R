@@ -77,3 +77,9 @@ glimpse(df)
 
 count(df, header) %>%
   arrange(desc(n))
+
+# create_warc(url_list="http://journal.code4lib.org",
+#             warc_path="~/data/journal",
+#             warc_file="journal",
+#             no_output=FALSE,
+#             .opts=c('--level=2', "--recursive"))

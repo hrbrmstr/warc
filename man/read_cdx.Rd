@@ -15,6 +15,10 @@ to the location of the CDX file}
 \description{
 CDX files are used to index the content of WARC files.
 }
+\details{
+The returned object is a \code{tbl_df} but is also classed
+\code{cdx}.
+}
 \examples{
 \dontrun{
 cdx <- read_cdx(system.file("extdata", "20160901.cdx", package="warc"))

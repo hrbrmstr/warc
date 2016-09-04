@@ -22,7 +22,7 @@ data. The default (after numerous tests) of \code{10x} the size of the
 compressed record seems to be the sweet spot, but you can override this
 value if you run into issues. The buffer is only temporary but is allocated
 across each call (just be aware that you're allocating moderately sized
-memory chunks eac time you call this).}
+memory chunks each time you call this).}
 }
 \description{
 Given the path to a WARC file (compressed or uncompressed) and the start/end
@@ -30,9 +30,19 @@ positions of the WARC record, this function will produce an R object from the
 WARC record.
 }
 \details{
-Currently, the WARC \code{response} object is supported and the object
-returned is classed both \code{warc_response} and \code{httr::response}
-and the standard \code{httr} content functions will work with the object.
+WARC \code{warinfo} objects are returned classed both \code{warc} and
+\code{info}.
+
+WARC \code{response} objects are returned classed both \code{warc} and
+\code{httr::response} and the standard \code{httr} content functions
+will work with the object.
+
+WARC \code{request} objects are returned classed both \code{warc} and
+\code{httr::request}.
+}
+\note{
+\code{warcinfo}, \code{request} and \code{response} objects are currently
+  supported.
 }
 \examples{
 \dontrun{

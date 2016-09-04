@@ -2,6 +2,9 @@
 #'
 #' CDX files are used to index the content of WARC files.
 #'
+#' The returned object is a \code{tbl_df} but is also classed
+#' \code{cdx}.
+#'
 #' @param path path to CDX file
 #' @param warc_path path to the WARC files referenced in \code{path}. Defaults to
 #'     to the location of the CDX file
@@ -12,9 +15,7 @@
 #' }
 read_cdx <- function(path, warc_path=dirname(path)) {
 
-  path <- path.expand(path)
-
-  lines <- stri_read_lines(path)
+  lines <- readr::read_lines(path.expand(path))
 
   delim <- substr(lines[1], 1, 1)
 
@@ -31,7 +32,8 @@ read_cdx <- function(path, warc_path=dirname(path)) {
   header <- left_join(header, field_trans, by="field")
 
   map_df(lines[-1], function(x) {
-    record <- setNames(as.list(stri_split_fixed(x, delim)[[1]]), header$short_name)
+    bits <- stri_split_fixed(x, delim)[[1]]
+    record <- setNames(as.list(bits), header$short_name)
   }) -> df
 
   df <- mutate(df, date=as.POSIXct(date, "%Y%m%d%H%M%S", tz="GMT"))
@@ -40,12 +42,17 @@ read_cdx <- function(path, warc_path=dirname(path)) {
 
   if ("compressed_arc_file_offset" %in% colnames(df)) {
 
-    group_by(df, file_name) %>%
-      do(calc_size(., warc_path)) %>%
-      ungroup() -> df
+    if (!("compressed_record_size" %in% colnames(df))) {
+
+      group_by(df, file_name) %>%
+        do(calc_size(., warc_path)) %>%
+        ungroup() -> df
+
+    }
 
   }
 
+  class(df) <- c("cdx", class(df))
   df
 
 }
