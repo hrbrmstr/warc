@@ -43,9 +43,15 @@ read_cdx <- function(path, warc_path=dirname(path)) {
   if ("compressed_arc_file_offset" %in% colnames(df)) {
     if (!("compressed_record_size" %in% colnames(df))) {
       group_by(df, file_name) %>%
-        do(calc_size(., warc_path)) %>%
+        do(calc_csize(., warc_path)) %>%
         ungroup() -> df
     }
+  }
+
+  if ("uncompressed_arc_file_offset" %in% colnames(df)) {
+    group_by(df, file_name) %>%
+      do(calc_size(., warc_path)) %>%
+      ungroup() -> df
   }
 
   if ("response_code" %in% colnames(df)) {
@@ -70,6 +76,8 @@ print.cdx <- function(x, ...) {
   fields <- mutate(fields, description=ifelse(short_name == "warc_path", "WARC path", description))
   fields <- mutate(fields, description=ifelse(short_name == "calc_compressed_warc_rec_size",
                                               "calcualted compressed WARC record size", description))
+  fields <- mutate(fields, description=ifelse(short_name == "calc_uncompressed_warc_rec_size",
+                                              "calcualted uncompressed WARC record size", description))
 
   cat(sprintf("# A CDX WARC index with %s records and the following fields:\n\n",
               scales::comma(nrow(x))))
@@ -88,9 +96,9 @@ print.cdx <- function(x, ...) {
 
 }
 
-#' Calculate the size of the final WARC record in the file
+#' Calculate the size of the final WARC record in the file (compressed)
 #' @noRd
-calc_size <- function(x, warc_path) {
+calc_csize <- function(x, warc_path) {
 
   fsiz <- file.size(file.path(warc_path, x$file_name[1]))
 
@@ -100,6 +108,24 @@ calc_size <- function(x, warc_path) {
 
   x$calc_compressed_warc_rec_size[nrow(x)] <-
     fsiz - x$compressed_arc_file_offset[nrow(x)] + 1
+
+  x
+
+}
+
+
+#' Calculate the size of the final WARC record in the file (uncompressed)
+#' @noRd
+calc_size <- function(x, warc_path) {
+
+  fsiz <- file.size(file.path(warc_path, x$file_name[1]))
+
+  x$calc_uncompressed_warc_rec_size <-
+    c(x$uncompressed_arc_file_offset[-1], 0) -
+    x$uncompressed_arc_file_offset + 1
+
+  x$calc_uncompressed_warc_rec_size[nrow(x)] <-
+    fsiz - x$uncompressed_arc_file_offset[nrow(x)] + 1
 
   x
 

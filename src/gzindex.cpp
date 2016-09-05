@@ -87,11 +87,7 @@ void int_create_cdx_from_gzwarc(std::string warc_path,
   FILE *fp = fopen(warc_path.c_str(), "rb");
   gzFile gzf = gzdopen(fileno(fp), "rb");
 
-  if (DEBUG) Rcout << "opening gz file" << std::endl;
-
   if (gzf) {
-
-    if (DEBUG) Rcout << "gz file opened" << std::endl;
 
     res = gzbuffer(gzf, 32*1024);
 
@@ -117,11 +113,13 @@ void int_create_cdx_from_gzwarc(std::string warc_path,
     char warc_segment_origin_id[KEY_VAL_MAX];
     char warc_segment_total_length[KEY_VAL_MAX];
     z_off_t warc_offset = 0;
+    z_off_t u_warc_offset = 0;
     struct tm ts;
     char *cp;
     char warc_time[TIME_MAX];
     char status[5];
     z_off_t pre, post;
+    bool hasV = false;
 
     std::map<char, std::string> warc_fields;
     std::string warc_keys = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -131,6 +129,7 @@ void int_create_cdx_from_gzwarc(std::string warc_path,
 
     cdx_file << " CDX ";
     for (char c : field_spec) {
+      if (c=='V') hasV = true;
       cur++;
       cdx_file << c;
       if (cur < len) {
@@ -140,9 +139,11 @@ void int_create_cdx_from_gzwarc(std::string warc_path,
       }
     }
 
+    u_warc_offset = gztell(gzf);
+
     while ((line=gzgets(gzf, buf, BUF_LEN)) != NULL) {
 
-      if (DEBUG) Rcout << "getting a line" << std::endl;
+      if (DEBUG) Rcout << "OUTER WLINE " << line;
 
       strcpy(target_uri, "-");
       strcpy(status, "-");
@@ -153,7 +154,7 @@ void int_create_cdx_from_gzwarc(std::string warc_path,
 
       while(strcmp("\r\n", line=gzgets(gzf, buf, BUF_LEN)) != 0) {
 
-        if (DEBUG) Rcout << "   ==> getting another line" << std::endl;
+        Rcout << "INNER WLINE: " << line;
 
         buf[strcspn(buf, "\r\n")] = '\0';
         char *v = strnstr(buf, ": ", strlen(buf));
@@ -181,7 +182,6 @@ void int_create_cdx_from_gzwarc(std::string warc_path,
             strncpy(warc_type, val, KEY_VAL_MAX);
             strncpy(mime_type, warc_type, KEY_VAL_MAX);
             warc_fields['m'] = std::string(warc_type);
-            if (DEBUG) Rcout << "WARC-Type: " << warc_type << std::endl;
           } else if (strcmp("WARC-Concurrent-To", key) == 0) {
             strncpy(warc_concurrent_to, val, KEY_VAL_MAX);
           } else if (strcmp("WARC-Block-Digest", key) == 0) {
@@ -220,19 +220,21 @@ void int_create_cdx_from_gzwarc(std::string warc_path,
 
       if (strcmp("response", warc_type) == 0) {
 
-        if (DEBUG) Rcout << "writing response record to gz file" << std::endl;
-
         warc_fields['V'] = std::to_string(warc_offset);
+        warc_fields['v'] = std::to_string(u_warc_offset);
 
         pre = gztell(gzf);
 
         line = gzgets(gzf, buf, BUF_LEN);
+        Rcout << "RESPONSE WLINE: " << line;
+
         buf[strcspn(buf, "\r\n")] = '\0';
         strtok(buf, " ");
         strcpy(status, strtok(NULL, " "));
         warc_fields['s'] = std::string(status);
 
         while(strcmp("\r\n", line=gzgets(gzf, buf, BUF_LEN)) != 0) {
+          Rcout << "RESPONSE LINE: " << line;
           buf[strcspn(buf, "\r\n")] = '\0';
           char *v = strnstr(buf, ": ", strlen(buf));
           if (v) {
@@ -249,9 +251,9 @@ void int_create_cdx_from_gzwarc(std::string warc_path,
           }
         }
 
-        post = gztell(gzf);
+        post = gztell(gzf); // position after the response header
 
-        gzseek(gzf, (content_length - (post-pre+1)), SEEK_CUR);
+        gzseek(gzf, (content_length - (post-pre)), SEEK_CUR);
 
         cur = 0;
         for (char c : field_spec) {
@@ -268,12 +270,18 @@ void int_create_cdx_from_gzwarc(std::string warc_path,
         gzseek(gzf, content_length, SEEK_CUR);
       }
 
-      if (DEBUG) Rcout << "WARC offset: " << warc_offset << std::endl;
-
       warc_offset = gzoffset(gzf);
 
+      if (hasV & (warc_offset == 0)) {
+        stop("Compressed WARC file is not in individual stream format. Use 'v' instead of 'V' to record uncompressed offset");
+      }
+
       line = gzgets(gzf, buf, BUF_LEN);
+      Rcout << "BETWEEN RECORDS LINE: " << line;
       line = gzgets(gzf, buf, BUF_LEN);
+      Rcout << "BETWEEN RECORDS LINE: " << line;
+
+      u_warc_offset = gztell(gzf);
 
     }
 

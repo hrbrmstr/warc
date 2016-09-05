@@ -23,7 +23,7 @@ as_warc <- function(x) {
         }
         sprintf("%s: %s\r\n", n, v)
       })
-      ro <- c(r_status, ro, "\r\n")
+      ro <- c(r_status, ro, "\r\n") # status / http response headers / CRLF
       ro <- paste0(ro, collapse="")
 
       cl <- nchar(ro)
@@ -45,7 +45,7 @@ as_warc <- function(x) {
       wo <- map2_chr(names(w_headers), w_headers, function(n, v) {
         sprintf("%s: %s\r\n", n, v)
       })
-      wo <- c(warc_version, wo, "\r\n")
+      wo <- c(warc_version, wo, "\r\n") # version / warc headers / CRLF
       wo <- paste0(wo, collapse="")
 
       ret <- list(rendered_warc_header=wo, rendered_response_header=ro, content=cnt)

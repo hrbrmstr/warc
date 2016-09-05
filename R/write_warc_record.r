@@ -19,7 +19,9 @@ write_warc_record <- function(warc_rec, warc_path, compressed=FALSE, append=TRUE
 
   if (!is.null(warc_rec$content)) writeBin(warc_rec$content, wf, useBytes=TRUE)
 
-  cat("\r\n\r\n", file=wf, append=TRUE)
+  cat("\r\n\r\n", file=wf, append=TRUE) # two CRLFs after WARC record
+
+  flush(wf)
 
   close(wf)
 
