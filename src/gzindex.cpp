@@ -30,7 +30,7 @@ using namespace Rcpp;
 #define KEY_VAL_MAX 256
 #define TIME_MAX 32
 
-#define DEBUG 1
+#define DEBUG 0
 
 char *no_space(char *str) {
   int ct=0;
@@ -143,8 +143,6 @@ void int_create_cdx_from_gzwarc(std::string warc_path,
 
     while ((line=gzgets(gzf, buf, BUF_LEN)) != NULL) {
 
-      if (DEBUG) Rcout << "OUTER WLINE " << line;
-
       strcpy(target_uri, "-");
       strcpy(status, "-");
       strcpy(mime_type, "-");
@@ -153,8 +151,6 @@ void int_create_cdx_from_gzwarc(std::string warc_path,
       buf[strcspn(buf, "\r\n")] = '\0';
 
       while(strcmp("\r\n", line=gzgets(gzf, buf, BUF_LEN)) != 0) {
-
-        Rcout << "INNER WLINE: " << line;
 
         buf[strcspn(buf, "\r\n")] = '\0';
         char *v = strnstr(buf, ": ", strlen(buf));
@@ -226,7 +222,6 @@ void int_create_cdx_from_gzwarc(std::string warc_path,
         pre = gztell(gzf);
 
         line = gzgets(gzf, buf, BUF_LEN);
-        Rcout << "RESPONSE WLINE: " << line;
 
         buf[strcspn(buf, "\r\n")] = '\0';
         strtok(buf, " ");
@@ -234,7 +229,6 @@ void int_create_cdx_from_gzwarc(std::string warc_path,
         warc_fields['s'] = std::string(status);
 
         while(strcmp("\r\n", line=gzgets(gzf, buf, BUF_LEN)) != 0) {
-          Rcout << "RESPONSE LINE: " << line;
           buf[strcspn(buf, "\r\n")] = '\0';
           char *v = strnstr(buf, ": ", strlen(buf));
           if (v) {
@@ -277,9 +271,7 @@ void int_create_cdx_from_gzwarc(std::string warc_path,
       }
 
       line = gzgets(gzf, buf, BUF_LEN);
-      Rcout << "BETWEEN RECORDS LINE: " << line;
       line = gzgets(gzf, buf, BUF_LEN);
-      Rcout << "BETWEEN RECORDS LINE: " << line;
 
       u_warc_offset = gztell(gzf);
 

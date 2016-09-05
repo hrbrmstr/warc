@@ -120,6 +120,13 @@ calc_size <- function(x, warc_path) {
 
   fsiz <- file.size(file.path(warc_path, x$file_name[1]))
 
+  if (grepl("gz$", file.path(warc_path, x$file_name[1]))) {
+    wf <- file(file.path(warc_path, x$file_name[1]), "rb")
+    seek(wf, fsiz-4, "start")
+    fsiz <- readBin(wf, "integer")
+    close(wf)
+  }
+
   x$calc_uncompressed_warc_rec_size <-
     c(x$uncompressed_arc_file_offset[-1], 0) -
     x$uncompressed_arc_file_offset + 1
