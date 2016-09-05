@@ -30,6 +30,8 @@ using namespace Rcpp;
 #define KEY_VAL_MAX 256
 #define TIME_MAX 32
 
+#define DEBUG 1
+
 char *no_space(char *str) {
   int ct=0;
   for (int i=0; str[i]; i++)
@@ -74,8 +76,6 @@ void int_create_cdx_from_gzwarc(std::string warc_path,
   std::string base = Rcpp::as<std::string>(basename(warc_path));
   const char *warc_file = base.c_str();
 
-  FILE *fp = fopen(warc_path.c_str(), "rb");
-  gzFile gzf = gzdopen(fileno(fp), "rb");
   int res;
   char buf[BUF_LEN];
 
@@ -84,7 +84,14 @@ void int_create_cdx_from_gzwarc(std::string warc_path,
 
   std::ofstream cdx_file(cdx_path);
 
+  FILE *fp = fopen(warc_path.c_str(), "rb");
+  gzFile gzf = gzdopen(fileno(fp), "rb");
+
+  if (DEBUG) Rcout << "opening gz file" << std::endl;
+
   if (gzf) {
+
+    if (DEBUG) Rcout << "gz file opened" << std::endl;
 
     res = gzbuffer(gzf, 32*1024);
 
@@ -119,6 +126,7 @@ void int_create_cdx_from_gzwarc(std::string warc_path,
     std::map<char, std::string> warc_fields;
     std::string warc_keys = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     for (char c : warc_keys) warc_fields[c] = "-";
+
     warc_fields['g'] = std::string(warc_file);
 
     cdx_file << " CDX ";
@@ -134,6 +142,8 @@ void int_create_cdx_from_gzwarc(std::string warc_path,
 
     while ((line=gzgets(gzf, buf, BUF_LEN)) != NULL) {
 
+      if (DEBUG) Rcout << "getting a line" << std::endl;
+
       strcpy(target_uri, "-");
       strcpy(status, "-");
       strcpy(mime_type, "-");
@@ -142,6 +152,8 @@ void int_create_cdx_from_gzwarc(std::string warc_path,
       buf[strcspn(buf, "\r\n")] = '\0';
 
       while(strcmp("\r\n", line=gzgets(gzf, buf, BUF_LEN)) != 0) {
+
+        if (DEBUG) Rcout << "   ==> getting another line" << std::endl;
 
         buf[strcspn(buf, "\r\n")] = '\0';
         char *v = strnstr(buf, ": ", strlen(buf));
@@ -169,6 +181,7 @@ void int_create_cdx_from_gzwarc(std::string warc_path,
             strncpy(warc_type, val, KEY_VAL_MAX);
             strncpy(mime_type, warc_type, KEY_VAL_MAX);
             warc_fields['m'] = std::string(warc_type);
+            if (DEBUG) Rcout << "WARC-Type: " << warc_type << std::endl;
           } else if (strcmp("WARC-Concurrent-To", key) == 0) {
             strncpy(warc_concurrent_to, val, KEY_VAL_MAX);
           } else if (strcmp("WARC-Block-Digest", key) == 0) {
@@ -206,6 +219,10 @@ void int_create_cdx_from_gzwarc(std::string warc_path,
       }
 
       if (strcmp("response", warc_type) == 0) {
+
+        if (DEBUG) Rcout << "writing response record to gz file" << std::endl;
+
+        warc_fields['V'] = std::to_string(warc_offset);
 
         pre = gztell(gzf);
 
@@ -250,6 +267,8 @@ void int_create_cdx_from_gzwarc(std::string warc_path,
       } else {
         gzseek(gzf, content_length, SEEK_CUR);
       }
+
+      if (DEBUG) Rcout << "WARC offset: " << warc_offset << std::endl;
 
       warc_offset = gzoffset(gzf);
 
