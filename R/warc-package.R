@@ -5,7 +5,7 @@
 #' @author Bob Rudis (@@hrbrmstr)
 #' @import purrr readr
 #' @importFrom dplyr glimpse tbl_df data_frame left_join mutate filter select group_by do ungroup
-#' @import stringi
+#' @import stringi uuid
 #' @importFrom httr insensitive
 #' @useDynLib warc
 #' @importFrom Rcpp sourceCpp
