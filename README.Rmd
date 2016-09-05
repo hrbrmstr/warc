@@ -6,18 +6,21 @@ output: rmarkdown::github_document
 
 The following functions are implemented:
 
+- `as_warc`:	Convert an `httr::respone` object to WARC response objects
 - `create_cdx`:	Create a CDX from a WARC file
 - `create_warc`:	Use wget to create a WARC archive for a URL list
 - `expand`:	Expand a compressed raw buffer
+- `find_sequence`:	Find the first occurrence (if any) of a sequence of raw bytes (`pattern`) in `buffer`
 - `read_cdx`:	Read a WARC CDX index file
 - `read_warc_entry`:	Read a WARC entry from a WARC file
 - `warc_headers`:	Extract WARC headers from a WARC response object
 - `create_warc`	Use wget to create a WARC archive for a URL list
+- `write_warc_record`:	Write a WARC record to a file
 
 ### Installation
 
 ```{r eval=FALSE}
-devtools::install_github("hrbrmstr/warc")
+devtools::install_git("https://gitlab.com/hrbrmstr/warc.git")
 ```
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, error=FALSE}

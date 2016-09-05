@@ -2,11 +2,14 @@
 % Please edit documentation in R/as_warc.r
 \name{as_warc}
 \alias{as_warc}
-\title{Convert an httr::resspone object to WARC request/response objects}
+\title{Convert an \code{httr::respone} object to WARC response objects}
 \usage{
 as_warc(x)
 }
+\arguments{
+\item{x}{\code{httr} \code{response} object}
+}
 \description{
-Convert an httr::resspone object to WARC request/response objects
+Convert an \code{httr::respone} object to WARC response objects
 }
 

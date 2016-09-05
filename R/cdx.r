@@ -67,6 +67,9 @@ print.cdx <- function(x, ...) {
 
   fields <- left_join(data_frame(short_name=colnames(x)), field_trans, by="short_name")
   fields <- mutate(fields, description=ifelse(is.na(description), "", description))
+  fields <- mutate(fields, description=ifelse(short_name == "warc_path", "WARC path", description))
+  fields <- mutate(fields, description=ifelse(short_name == "calc_compressed_warc_rec_size",
+                                              "calcualted compressed WARC record size", description))
 
   cat(sprintf("# A CDX WARC index with %s records and the following fields:\n\n",
               scales::comma(nrow(x))))

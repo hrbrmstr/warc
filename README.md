@@ -3,18 +3,21 @@
 
 The following functions are implemented:
 
+-   `as_warc`: Convert an `httr::respone` object to WARC response objects
 -   `create_cdx`: Create a CDX from a WARC file
 -   `create_warc`: Use wget to create a WARC archive for a URL list
 -   `expand`: Expand a compressed raw buffer
+-   `find_sequence`: Find the first occurrence (if any) of a sequence of raw bytes (`pattern`) in `buffer`
 -   `read_cdx`: Read a WARC CDX index file
 -   `read_warc_entry`: Read a WARC entry from a WARC file
 -   `warc_headers`: Extract WARC headers from a WARC response object
 -   `create_warc` Use wget to create a WARC archive for a URL list
+-   `write_warc_record`: Write a WARC record to a file
 
 ### Installation
 
 ``` r
-devtools::install_github("hrbrmstr/warc")
+devtools::install_git("https://gitlab.com/hrbrmstr/warc.git")
 ```
 
 ### Usage
@@ -119,7 +122,7 @@ library(testthat)
 date()
 ```
 
-    ## [1] "Sun Sep  4 16:26:16 2016"
+    ## [1] "Mon Sep  5 11:40:08 2016"
 
 ``` r
 test_dir("tests/")
