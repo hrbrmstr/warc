@@ -47,8 +47,7 @@ in that order.
 }
 \note{
 Only "\code{response}" is the currently supported value for
-  \code{warc_record_types} and "\code{abmsrVgu}" is hardcoded (and it only indexes
-  gz WARC files...hey, it's alpha s/w).
+  \code{warc_record_types} and it only indexes gz WARC files...hey, it's alpha s/w.
 }
 \references{
 \url{https://iipc.github.io/warc-specifications/specifications/cdx-format/cdx-2015/}

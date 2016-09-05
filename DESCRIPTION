@@ -8,6 +8,7 @@ Maintainer: Bob Rudis <bob@rud.is>
 Description: warc description goes here
 URL: http://github.com/hrbrmstr/warc
 BugReports: https://github.com/hrbrmstr/warc/issues
+SystemRequirements: zlib, C++11
 License: AGPL
 Suggests:
     testthat

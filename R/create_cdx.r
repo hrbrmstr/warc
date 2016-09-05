@@ -32,12 +32,14 @@
 #' @param field_spec (See \code{Description})
 #' @param cdx_path where to output the CDX file
 #' @note Only "\code{response}" is the currently supported value for
-#'   \code{warc_record_types} and "\code{abmsrVgu}" is hardcoded (and it only indexes
-#'   gz WARC files...hey, it's alpha s/w).
+#'   \code{warc_record_types} and it only indexes gz WARC files...hey, it's alpha s/w.
 #' @references \url{https://iipc.github.io/warc-specifications/specifications/cdx-format/cdx-2015/}
 #' @export
 create_cdx <- function(warc_path, warc_record_types="response",
                        field_spec="abmsrVgu", cdx_path) {
+
+  warc_path <- path.expand(warc_path)
+  cdx_path <- path.expand(cdx_path)
 
   if (grepl(".gz", warc_path)) {
     invisible(.Call('warc_int_create_cdx_from_gzwarc', PACKAGE = 'warc',
