@@ -1,12 +1,23 @@
 
-`warc` : Tools to Work with the Web Archive Ecosystem (WARC & CDX files)
+`warc` : Tools to Work with the Web Archive Ecosystem
+
+[WARC](http://www.digitalpreservation.gov/formats/fdd/fdd000236.shtml) files (and the metadata files that usually follow them) are the de facto method of archiving web content. There are tools in Python & Java to work with this data and there are many "big data" tools that make working with large-scale data from sites like [Common Crawl](http://commoncrawl.org/) and [The Internet Archive](https://archive.org/index.php) very straightforward.
+
+Now there are tools to create and work with the WARC ecosystem in R.
+
+Possible use-cases:
+
+-   If you need to scrape data from many URLs and would like to make the analyses on that data reproducible but are concerned that the sites may change format or may be offline but also don't want to manage individual HTML (etc) files
+-   Analyzing Common Crawl data (etc) natively in R
+-   Saving the entire state of an `httr` request (`warc` can turn `httr` responses into WARC files and turns WARC `response` records into `httr::response` objects)
+
+`warc` can work with WARC files that are composed of individual gzip streams or on plaintext WARC files and can also read & generate CDX files. Support for more file types (e.g. WET, WAT, etc) are planned.
 
 The following functions are implemented:
 
 -   `as_warc`: Convert an `httr::respone` object to WARC response objects
 -   `create_cdx`: Create a CDX from a WARC file
 -   `create_warc`: Use wget to create a WARC archive for a URL list
--   `expand`: Expand a compressed raw buffer
 -   `find_sequence`: Find the first occurrence (if any) of a sequence of raw bytes (`pattern`) in `buffer`
 -   `read_cdx`: Read a WARC CDX index file
 -   `read_warc_entry`: Read a WARC entry from a WARC file
@@ -37,11 +48,10 @@ cdx <- read_cdx(system.file("extdata", "20160901.cdx", package="warc"))
 
 i <- 5
 
-p <- file.path(cdx$warc_path[i], cdx$file_name[i])
-st <- cdx$compressed_arc_file_offset[i]
-sz <- cdx$calc_compressed_warc_rec_size[i]
+path <- file.path(cdx$warc_path[i], cdx$file_name[i])
+start <- cdx$compressed_arc_file_offset[i]
 
-entry <- read_warc_entry(p, st, sz)
+entry <- read_warc_entry(path, start)
 
 print(entry)
 ```
@@ -113,6 +123,40 @@ print(http_type(entry))
 
     ## [1] "text/html"
 
+### Creating + reading
+
+``` r
+library(warc)
+library(purrr)
+library(rvest)
+
+warc_dir <- file.path(tempdir(), "rfolks")
+dir.create(warc_dir)
+
+urls <- c("http://rud.is/",
+          "http://hadley.nz/",
+          "http://dirk.eddelbuettel.com/",
+          "https://jeroenooms.github.io/",
+          "https://ironholds.org/")
+
+create_warc(urls, warc_dir, warc_file="rfolks-warc")
+
+cdx <- read_cdx(file.path(warc_dir, "rfolks-warc.cdx"))
+
+sites <- map(1:nrow(cdx),
+             ~read_warc_entry(file.path(cdx$warc_path[.], cdx$file_name[.]), 
+                              cdx$compressed_arc_file_offset[.]))
+
+map(sites, ~read_html(content(., as="text", encoding="UTF-8"))) %>% 
+  map_chr(~html_text(html_nodes(., "title")))
+```
+
+    ## [1] "rud.is"              "Hadley Wickham"      "Dirk Eddelbuettel"   "About Jeroen..."     "Oliver Keyes - Home"
+
+``` r
+unlink(warc_dir)
+```
+
 ### Test Results
 
 ``` r
@@ -122,7 +166,7 @@ library(testthat)
 date()
 ```
 
-    ## [1] "Mon Sep  5 11:40:08 2016"
+    ## [1] "Tue Sep  6 13:48:02 2016"
 
 ``` r
 test_dir("tests/")

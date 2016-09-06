@@ -5,7 +5,7 @@ Version: 0.1.0
 Date: 2016-09-01
 Author: Bob Rudis (@hrbrmstr)
 Maintainer: Bob Rudis <bob@rud.is>
-Description: warc description goes here
+Description: Read and create web archive ('WARC') and WARC index ('CDX') files/records.
 URL: http://github.com/hrbrmstr/warc
 BugReports: https://github.com/hrbrmstr/warc/issues
 SystemRequirements: zlib, C++11
