@@ -14,7 +14,6 @@ using namespace Rcpp;
 static voidpf R_zlib_alloc(voidpf ptr, uInt items, uInt size) {
   return(R_alloc(items, size));
 }
-
 static void R_zlib_free(voidpf ptr, voidpf addr) {}
 
 #define error Rf_error

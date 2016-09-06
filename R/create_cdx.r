@@ -41,14 +41,8 @@ create_cdx <- function(warc_path, warc_record_types="response",
   warc_path <- path.expand(warc_path)
   cdx_path <- path.expand(cdx_path)
 
-  if (grepl(".gz", warc_path)) {
-    invisible(.Call('warc_int_create_cdx_from_gzwarc', PACKAGE = 'warc',
-                    warc_path=warc_path, warc_record_types=warc_record_types,
-                    field_spec=field_spec, cdx_prefix=cdx_path))
-  } else {
-    invisible(.Call('warc_int_create_cdx_from_warc', PACKAGE = 'warc',
-                    warc_path=warc_path, warc_record_types=warc_record_types,
-                    field_spec=field_spec, cdx_prefix=cdx_path))
-  }
+  invisible(.Call('warc_int_create_cdx_from_warc', PACKAGE='warc',
+                  warc_path=warc_path, warc_record_types=warc_record_types,
+                  field_spec=field_spec, cdx_prefix=cdx_path))
 
 }
