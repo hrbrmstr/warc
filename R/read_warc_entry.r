@@ -1,7 +1,7 @@
 #' Read a WARC entry from a WARC file
 #'
 #' Given the path to a WARC file (compressed or uncompressed) and the start
-#' positions of the WARC record, this function will produce an R object from the
+#' position of the WARC record, this function will produce an R object from the
 #' WARC record.
 #'
 #' WARC \code{warinfo} objects are returned classed both \code{warc} and
@@ -27,16 +27,43 @@
 #'
 #' (read_warc_entry(path, start))
 #' }
-read_warc_entry <- function(path, start, size, compressed=grepl(".gz$", path),
-                            compressed_buffer_multiplier=10) {
+read_warc_entry <- function(path, start, compressed=grepl(".gz$", path)) {
 
   path <- path.expand(path)
 
-  fil <- file(path, "rb")
-  seek(fil, start)
-  buffer <- readBin(fil, "raw", size)
-  if (compressed) buffer <- expand(buffer, length(buffer)*compressed_buffer_multiplier);
-  close(fil)
+  if (compressed) {
+    buffer <- gzip_inflate_from_pos(path, start)
+  } else {
+
+    fil <- file(path, "rb")
+    seek(fil, start)
+
+    # get content length
+    cl <- 0
+    repeat {
+      line <- readLines(fil, 1)
+      if (suppressWarnings(grepl("^Content-Length: ", line))) {
+        cl <- as.numeric(stri_split_fixed(trimws(line), ": ", 2)[[1]][2])
+        break
+      }
+    }
+
+    # find end of WARC header
+    repeat {
+      line <- trimws(readLines(fil, 1))
+      if (line == "") break
+    }
+
+    # go to end of record
+    seek(fil, cl+2, "current")
+    pos <- seek(fil)
+
+    seek(fil, start)
+    buffer <- readBin(fil, "raw", pos-start)
+    close(fil)
+
+  }
+
   process_entry(buffer)
 
 }

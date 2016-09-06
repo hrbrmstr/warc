@@ -4,8 +4,7 @@
 \alias{read_warc_entry}
 \title{Read a WARC entry from a WARC file}
 \usage{
-read_warc_entry(path, start, size, compressed = grepl(".gz$", path),
-  compressed_buffer_multiplier = 10)
+read_warc_entry(path, start, compressed = grepl(".gz$", path))
 }
 \arguments{
 \item{path}{path to WARC file}
@@ -14,7 +13,7 @@ read_warc_entry(path, start, size, compressed = grepl(".gz$", path),
 }
 \description{
 Given the path to a WARC file (compressed or uncompressed) and the start
-positions of the WARC record, this function will produce an R object from the
+position of the WARC record, this function will produce an R object from the
 WARC record.
 }
 \details{

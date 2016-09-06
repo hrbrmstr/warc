@@ -24,26 +24,39 @@ static void R_zlib_free(voidpf ptr, voidpf addr) {}
 #include <zlib.h>
 
 #if defined(MSDOS) || defined(OS2) || defined(WIN32) || defined(__CYGWIN__)
-#  include <fcntl.h>
-#  include <io.h>
-#  define SET_BINARY_MODE(file) setmode(fileno(file), O_BINARY)
+#include <fcntl.h>
+#include <io.h>
+#define SET_BINARY_MODE(file) setmode(fileno(file), O_BINARY)
 #else
-#  define SET_BINARY_MODE(file)
+#define SET_BINARY_MODE(file)
 #endif
 
-#define CHUNK 16384*2
+#define CHUNK (16*1024*2)
 
+//' Inflate a gzip stream from a file
+//'
+//' Given a gzip file that was built with concatenated individual gzip streams,
+//' this function will expand the contents of the stream into a \code{raw} vector
+//' and return it.
+//'
+//' @param path path to gzip individual stream compressed WARC file
+//' @param raw_stream_pos position in the raw file at \code{path} (not the "gzip
+//'   stream position")
+//' @note Since this is working with compressed files, the memory size of the returned
+//'   value may be quite large.
 //' @export
 // [[Rcpp::export]]
-RawVector inflate_from_pos(std::string src, size_t raw_stream_pos) {
+RawVector gzip_inflate_from_pos(std::string path, size_t raw_stream_pos) {
+
+  // zlib zpipe.c FTW
 
   int ret;
   unsigned have;
   z_stream strm;
   unsigned char in[CHUNK];
   unsigned char out[CHUNK];
-  FILE *source = fopen(src.c_str(), "rb");
-  FILE *dest = stdout;
+
+  FILE *source = fopen(path.c_str(), "rb");
 
   std::vector<unsigned char> rv;
   rv.reserve(CHUNK);
@@ -51,7 +64,6 @@ RawVector inflate_from_pos(std::string src, size_t raw_stream_pos) {
   SET_BINARY_MODE(source);
   SET_BINARY_MODE(dest);
 
-  /* allocate inflate state */
   strm.zalloc = R_zlib_alloc;
   strm.zfree = R_zlib_free;
   strm.opaque = Z_NULL;
@@ -91,45 +103,13 @@ RawVector inflate_from_pos(std::string src, size_t raw_stream_pos) {
       have = CHUNK - strm.avail_out;
       std::vector<unsigned char> tmp(out, out+have);
       rv.insert(rv.end(), tmp.begin(), tmp.end());
-      if (fwrite(out, 1, have, dest) != have || ferror(dest)) {
-        (void)inflateEnd(&strm);
-        Rcpp::stop("unable to write bytes to output");
-      }
     } while (strm.avail_out == 0);
 
   } while (ret != Z_STREAM_END);
 
   (void)inflateEnd(&strm);
-  //ret == Z_STREAM_END ? Z_OK : Z_DATA_ERROR;
 
   return(wrap(rv));
-
-}
-
-/* report a zlib or i/o error */
-void zerr(int ret) {
-
-  fputs("zpipe: ", stderr);
-
-  switch (ret) {
-  case Z_ERRNO:
-    if (ferror(stdin))
-      fputs("error reading stdin\n", stderr);
-    if (ferror(stdout))
-      fputs("error writing stdout\n", stderr);
-    break;
-  case Z_STREAM_ERROR:
-    fputs("invalid compression level\n", stderr);
-    break;
-  case Z_DATA_ERROR:
-    fputs("invalid or incomplete deflate data\n", stderr);
-    break;
-  case Z_MEM_ERROR:
-    fputs("out of memory\n", stderr);
-    break;
-  case Z_VERSION_ERROR:
-    fputs("zlib version mismatch!\n", stderr);
-  }
 
 }
 
