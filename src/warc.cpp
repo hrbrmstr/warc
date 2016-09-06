@@ -19,6 +19,121 @@ static void R_zlib_free(voidpf ptr, voidpf addr) {}
 
 #define error Rf_error
 
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
+#include <zlib.h>
+
+#if defined(MSDOS) || defined(OS2) || defined(WIN32) || defined(__CYGWIN__)
+#  include <fcntl.h>
+#  include <io.h>
+#  define SET_BINARY_MODE(file) setmode(fileno(file), O_BINARY)
+#else
+#  define SET_BINARY_MODE(file)
+#endif
+
+#define CHUNK 16384*2
+
+//' @export
+// [[Rcpp::export]]
+RawVector inflate_from_pos(std::string src, size_t raw_stream_pos) {
+
+  int ret;
+  unsigned have;
+  z_stream strm;
+  unsigned char in[CHUNK];
+  unsigned char out[CHUNK];
+  FILE *source = fopen(src.c_str(), "rb");
+  FILE *dest = stdout;
+
+  std::vector<unsigned char> rv;
+  rv.reserve(CHUNK);
+
+  SET_BINARY_MODE(source);
+  SET_BINARY_MODE(dest);
+
+  /* allocate inflate state */
+  strm.zalloc = R_zlib_alloc;
+  strm.zfree = R_zlib_free;
+  strm.opaque = Z_NULL;
+  strm.avail_in = 0;
+  strm.next_in = Z_NULL;
+
+  ret = inflateInit2(&strm, 16+MAX_WBITS);
+  if (ret != Z_OK) Rcpp::stop("Error in gzip stream");
+
+  fseek(source, raw_stream_pos, SEEK_SET);
+
+  do {
+
+    strm.avail_in = fread(in, 1, CHUNK, source);
+    if (ferror(source)) {
+      (void)inflateEnd(&strm);
+      Rcpp::stop("Error reading from file");
+    }
+
+    if (strm.avail_in == 0) break;
+
+    strm.next_in = in;
+
+    do {
+      strm.avail_out = CHUNK;
+      strm.next_out = out;
+      ret = inflate(&strm, Z_NO_FLUSH);
+      assert(ret != Z_STREAM_ERROR);
+      switch (ret) {
+      case Z_NEED_DICT:
+        ret = Z_DATA_ERROR;
+      case Z_DATA_ERROR:
+      case Z_MEM_ERROR:
+        (void)inflateEnd(&strm);
+        Rcpp::stop("gzip deflate memory error");
+      }
+      have = CHUNK - strm.avail_out;
+      std::vector<unsigned char> tmp(out, out+have);
+      rv.insert(rv.end(), tmp.begin(), tmp.end());
+      if (fwrite(out, 1, have, dest) != have || ferror(dest)) {
+        (void)inflateEnd(&strm);
+        Rcpp::stop("unable to write bytes to output");
+      }
+    } while (strm.avail_out == 0);
+
+  } while (ret != Z_STREAM_END);
+
+  (void)inflateEnd(&strm);
+  //ret == Z_STREAM_END ? Z_OK : Z_DATA_ERROR;
+
+  return(wrap(rv));
+
+}
+
+/* report a zlib or i/o error */
+void zerr(int ret) {
+
+  fputs("zpipe: ", stderr);
+
+  switch (ret) {
+  case Z_ERRNO:
+    if (ferror(stdin))
+      fputs("error reading stdin\n", stderr);
+    if (ferror(stdout))
+      fputs("error writing stdout\n", stderr);
+    break;
+  case Z_STREAM_ERROR:
+    fputs("invalid compression level\n", stderr);
+    break;
+  case Z_DATA_ERROR:
+    fputs("invalid or incomplete deflate data\n", stderr);
+    break;
+  case Z_MEM_ERROR:
+    fputs("out of memory\n", stderr);
+    break;
+  case Z_VERSION_ERROR:
+    fputs("zlib version mismatch!\n", stderr);
+  }
+
+}
+
 // [[Rcpp::export]]
 SEXP gzuncompress(SEXP r_source, SEXP r_guess_size) {
 

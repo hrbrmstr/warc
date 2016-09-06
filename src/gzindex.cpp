@@ -41,31 +41,6 @@ char *no_space(char *str) {
 }
 
 // [[Rcpp::export]]
-void int_create_cdx_from_warc(std::string warc_path,
-                              std::string warc_record_types,
-                              std::string field_spec,
-                              std::string cdx_path) {
-
-  Rcpp::Environment baseEnv = Rcpp::Environment::base_env();
-  Rcpp::Function basename = baseEnv["basename"];
-  std::string base = Rcpp::as<std::string>(basename(warc_path));
-  const char *warc_file = base.c_str();
-
-  std::map<char, std::string> warc_fields;
-  std::string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-  for (char c : alphabet) warc_fields[c] = "-";
-
-  warc_fields['g'] = std::string(warc_file);
-
-  std::ifstream wf(warc_path);
-  std::ofstream cdx_file(cdx_path);
-
-  cdx_file.close();
-  wf.close();
-
-}
-
-// [[Rcpp::export]]
 void int_create_cdx_from_gzwarc(std::string warc_path,
                                 std::string warc_record_types,
                                 std::string field_spec,
@@ -267,7 +242,7 @@ void int_create_cdx_from_gzwarc(std::string warc_path,
       warc_offset = gzoffset(gzf);
 
       if (hasV & (warc_offset == 0)) {
-        stop("Compressed WARC file is not in individual stream format. Use 'v' instead of 'V' to record uncompressed offset");
+        stop("Compressed WARC file is not in individual gzip stream format. Use 'v' instead of 'V' to record uncompressed offset");
       }
 
       line = gzgets(gzf, buf, BUF_LEN);
