@@ -9,6 +9,20 @@ using namespace Rcpp;
 #include <iterator>
 
 #include <zlib.h>
+#if defined(MSDOS) || defined(OS2) || defined(WIN32) || defined(__CYGWIN__)
+#  include <fcntl.h>
+#  include <io.h>
+#  define SET_BINARY_MODE(file) setmode(fileno(file), O_BINARY)
+#else
+#  define SET_BINARY_MODE(file)
+#endif
+
+#include <Rdefines.h>
+#include <Rinternals.h>
+
+#include "R_ext/Memory.h"
+#include "R_ext/Utils.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -32,6 +46,8 @@ using namespace Rcpp;
 
 #define DEBUG 0
 
+#define CHUNK 16*1024*2
+
 char *no_space(char *str) {
   int ct=0;
   for (int i=0; str[i]; i++)
@@ -40,28 +56,83 @@ char *no_space(char *str) {
     return(str);
 }
 
+inline bool ends_with(std::string const &val, std::string const &sfx) {
+  if (sfx.size() > val.size()) return(false);
+  return(std::equal(sfx.rbegin(), sfx.rend(), val.rbegin()));
+}
+
+static voidpf R_zlib_alloc1(voidpf ptr, uInt items, uInt size) {
+  return(R_alloc(items, size));
+}
+static void R_zlib_free1(voidpf ptr, voidpf addr) {}
+
 // [[Rcpp::export]]
-void int_create_cdx_from_warc(std::string warc_path,
-                              std::string warc_record_types,
-                              std::string field_spec,
-                              std::string cdx_path) {
+void int_read_warc_raw(std::string warc_path, unsigned long start) {
 
-  Rcpp::Environment baseEnv = Rcpp::Environment::base_env();
-  Rcpp::Function basename = baseEnv["basename"];
-  std::string base = Rcpp::as<std::string>(basename(warc_path));
-  const char *warc_file = base.c_str();
+  Rcout << warc_path << " " << start << std::endl;
+  //bool is_gz = ends_with(warc_path, ".gz");
+  FILE *source = fopen(warc_path.c_str(), "rb");
 
-  std::map<char, std::string> warc_fields;
-  std::string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-  for (char c : alphabet) warc_fields[c] = "-";
+  int ret;
+  unsigned have;
+  z_stream strm;
+  unsigned char in[CHUNK];
+  unsigned char out[CHUNK];
 
-  warc_fields['g'] = std::string(warc_file);
+  strm.zalloc = R_zlib_alloc1;
+  strm.zfree = R_zlib_free1;
+  strm.opaque = NULL;
+  strm.avail_in = 0;
+  strm.next_in = Z_NULL;
+  ret = inflateInit(&strm);
+  if (ret != Z_OK) Rcpp::stop("inflate init failed");
 
-  std::ifstream wf(warc_path);
-  std::ofstream cdx_file(cdx_path);
+  fseek(source, start, SEEK_SET);
+  Rcout << "At: " << ftell(source) << std::endl;
 
-  cdx_file.close();
-  wf.close();
+  do {
+    strm.avail_in = fread(in, 1, CHUNK, source);
+    if (ferror(source)) {
+      (void)inflateEnd(&strm);
+      Rcpp::stop("file error");
+    }
+    if (strm.avail_in == 0) break;
+    strm.next_in = in;
+    do {
+      strm.avail_out = CHUNK;
+      strm.next_out = out;
+      ret = inflate(&strm, Z_NO_FLUSH);
+      assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
+      switch (ret) {
+      case Z_NEED_DICT:
+        ret = Z_DATA_ERROR;     /* and fall through */
+      case Z_DATA_ERROR:
+      case Z_MEM_ERROR:
+        (void)inflateEnd(&strm);
+        Rcpp::stop("memory error");
+      }
+      have = CHUNK - strm.avail_out;
+      for (int i=0; i<have; i++) Rcout << out[have];
+    } while (strm.avail_out == 0);
+  } while (ret != Z_STREAM_END);
+  (void)inflateEnd(&strm);
+
+  // if (is_gz) {
+  //
+  //   gzFile gzf = gzdopen(fileno(fp), "rb");
+  //
+  //   fseek(fp, start, SEEK_SET);
+  //
+  //   Rcout << gztell(gzf) << std::endl;
+  //   Rcout << gztell(gzf) << std::endl;
+  //   Rcout << gztell(gzf) << std::endl;
+  //
+  //   if (gzf) gzclose(gzf);
+  //
+  // } else {
+  // }
+  //
+  // if (fp) fclose(fp);
 
 }
 
@@ -76,6 +147,7 @@ void int_create_cdx_from_gzwarc(std::string warc_path,
   std::string base = Rcpp::as<std::string>(basename(warc_path));
   const char *warc_file = base.c_str();
 
+  //bool is_gz = ends_with(warc_path, ".gz");
   int res;
   char buf[BUF_LEN];
 

@@ -5,16 +5,14 @@
 
 using namespace Rcpp;
 
-// int_create_cdx_from_warc
-void int_create_cdx_from_warc(std::string warc_path, std::string warc_record_types, std::string field_spec, std::string cdx_path);
-RcppExport SEXP warc_int_create_cdx_from_warc(SEXP warc_pathSEXP, SEXP warc_record_typesSEXP, SEXP field_specSEXP, SEXP cdx_pathSEXP) {
+// int_read_warc_raw
+void int_read_warc_raw(std::string warc_path, unsigned long start);
+RcppExport SEXP warc_int_read_warc_raw(SEXP warc_pathSEXP, SEXP startSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope __rngScope;
     Rcpp::traits::input_parameter< std::string >::type warc_path(warc_pathSEXP);
-    Rcpp::traits::input_parameter< std::string >::type warc_record_types(warc_record_typesSEXP);
-    Rcpp::traits::input_parameter< std::string >::type field_spec(field_specSEXP);
-    Rcpp::traits::input_parameter< std::string >::type cdx_path(cdx_pathSEXP);
-    int_create_cdx_from_warc(warc_path, warc_record_types, field_spec, cdx_path);
+    Rcpp::traits::input_parameter< unsigned long >::type start(startSEXP);
+    int_read_warc_raw(warc_path, start);
     return R_NilValue;
 END_RCPP
 }

@@ -4,28 +4,16 @@
 \alias{read_warc_entry}
 \title{Read a WARC entry from a WARC file}
 \usage{
-read_warc_entry(path, start, size, compressed = grepl("gz$", path),
+read_warc_entry(path, start, size, compressed = grepl(".gz$", path),
   compressed_buffer_multiplier = 10)
 }
 \arguments{
 \item{path}{path to WARC file}
 
 \item{start}{starting offset of WARC record}
-
-\item{size}{total size of WARC record}
-
-\item{compressed}{is WARC file compressed? (guessed by file name suffix)}
-
-\item{compressed_buffer_multipler}{if the WARC file is compressed the record
-will be inflated which requires guessing the buffer size for the expanded
-data. The default (after numerous tests) of \code{10x} the size of the
-compressed record seems to be the sweet spot, but you can override this
-value if you run into issues. The buffer is only temporary but is allocated
-across each call (just be aware that you're allocating moderately sized
-memory chunks each time you call this).}
 }
 \description{
-Given the path to a WARC file (compressed or uncompressed) and the start/end
+Given the path to a WARC file (compressed or uncompressed) and the start
 positions of the WARC record, this function will produce an R object from the
 WARC record.
 }
@@ -48,11 +36,10 @@ WARC \code{request} objects are returned classed both \code{warc} and
 \dontrun{
 cdx <- read_cdx(system.file("extdata", "20160901.cdx", package="warc"))
 i <- 1
-p <- file.path(cdx$warc_path[i], cdx$file_name[i])
-st <- cdx$compressed_arc_file_offset[i]
-sz <- cdx$calc_compressed_warc_rec_size[i]
+path <- file.path(cdx$warc_path[i], cdx$file_name[i])
+start <- cdx$compressed_arc_file_offset[i]
 
-(read_warc_entry(p, st, sz))
+(read_warc_entry(path, start))
 }
 }
 
