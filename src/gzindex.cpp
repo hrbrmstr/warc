@@ -35,7 +35,7 @@ using namespace Rcpp;
 #include <errno.h>
 #include <stdint.h>
 #include <time.h>
-#include <xlocale.h>
+//#include <xlocale.h>
 
 #define _ISOC99_SOURCE
 #include <inttypes.h>
