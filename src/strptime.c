@@ -1,782 +1,755 @@
 #if defined(MSDOS) || defined(OS2) || defined(WIN32) || defined(__CYGWIN__)
-/*	$NetBSD: strptime.c,v 1.60 2016/05/15 20:37:48 christos Exp $	*/
 
-  /*-
-  * Copyright (c) 1997, 1998, 2005, 2008 The NetBSD Foundation, Inc.
-* All rights reserved.
-*
-  * This code was contributed to The NetBSD Foundation by Klaus Klein.
-* Heavily optimised by David Laight
-*
-  * Redistribution and use in source and binary forms, with or without
-* modification, are permitted provided that the following conditions
-* are met:
-  * 1. Redistributions of source code must retain the above copyright
-*    notice, this list of conditions and the following disclaimer.
-* 2. Redistributions in binary form must reproduce the above copyright
-*    notice, this list of conditions and the following disclaimer in the
-*    documentation and/or other materials provided with the distribution.
-*
-  * THIS SOFTWARE IS PROVIDED BY THE NETBSD FOUNDATION, INC. AND CONTRIBUTORS
-* ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
-* TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-* PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE FOUNDATION OR CONTRIBUTORS
-* BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-                         * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-                         * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-* CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-* ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-* POSSIBILITY OF SUCH DAMAGE.
+/* Convert a string representation of time to a time value.
+ Copyright (C) 1996, 1997, 1998, 1999, 2000 Free Software Foundation, Inc.
+ This file is part of the GNU C Library.
+ Contributed by Ulrich Drepper <drepper@cygnus.com>, 1996.
+
+ The GNU C Library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Library General Public License as
+published by the Free Software Foundation; either version 2 of the
+License, or (at your option) any later version.
+
+The GNU C Library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Library General Public License for more details.
+
+You should have received a copy of the GNU Library General Public
+License along with the GNU C Library; see the file COPYING.LIB.  If not,
+write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+Boston, MA 02111-1307, USA.  */
+
+/**
+* @file src/strptime.c
+* @brief This is a slightly modified version by the "R Project"
+* 				<http://www.r-project.org/> with locale support removed.
+*        Support for Windows locales added by Nils Durner for PlibC
 */
 
-  #include <sys/cdefs.h>
-  #if defined(LIBC_SCCS) && !defined(lint)
-  __RCSID("$NetBSD: strptime.c,v 1.60 2016/05/15 20:37:48 christos Exp $");
-#endif
+#include "plibc_private.h"
 
-#include "namespace.h"
-#include <sys/localedef.h>
-#include <sys/types.h>
+void get_locale_strings(void);
+
+/* XXX This version of the implementation is not really complete.
+Some of the fields cannot add information alone.  But if seeing
+some of them in the same format (such as year, week and weekday)
+this is enough information for determining the date.  */
+
 #include <ctype.h>
-#include <locale.h>
+#include <limits.h>
 #include <string.h>
 #include <time.h>
-#include <tzfile.h>
-#include "private.h"
-#include "setlocale_local.h"
 
-#ifdef __weak_alias
-__weak_alias(strptime,_strptime)
-__weak_alias(strptime_l, _strptime_l)
+#define match_char(ch1, ch2) if (ch1 != ch2) return NULL
+
+#ifndef Macintosh
+#if defined __GNUC__ && __GNUC__ >= 2
+# define match_string(cs1, s2)                              \
+({ size_t len = strlen (cs1);						                         \
+  int result = strncasecmp ((cs1), (s2), len) == 0;			      \
+  if (result) (s2) += len;						                            \
+  result; })
+#else
+/* Oh come on.  Get a reasonable compiler.  */
+# define match_string(cs1, s2) \
+(strncasecmp ((cs1), (s2), strlen (cs1)) ? 0 : ((s2) += strlen (cs1), 1))
 #endif
+#else
+# define match_string(cs1, s2) \
+(strncmp ((cs1), (s2), strlen (cs1)) ? 0 : ((s2) += strlen (cs1), 1))
+#endif /* mac */
 
-static const u_char *conv_num(const unsigned char *, int *, uint, uint);
-static const u_char *find_string(const u_char *, int *, const char * const *,
-                                 const char * const *, int);
+/* We intentionally do not use isdigit() for testing because this will
+  lead to problems with the wide character version.  */
+#define get_number(from, to, n)                                            \
+do {									                                                              \
+  int __n = n;							                                                      \
+  val = 0;								                                                         \
+  while (*rp == ' ')							                                                \
+    ++rp;								                                                          \
+  if (*rp < '0' || *rp > '9')						                                        \
+    return NULL;							                                                    \
+  do {								                                                             \
+    val *= 10;							                                                      \
+    val += *rp++ - '0';						                                              \
+  } while (--__n > 0 && val * 10 <= to && *rp >= '0' && *rp <= '9');	      \
+  if (val < from || val > to)						                                        \
+    return NULL;							                                                    \
+} while (0)
+# define get_alt_number(from, to, n)                       \
+/* We don't have the alternate representation.  */			      \
+get_number(from, to, n)
+#define recursive(new_fmt)      \
+(*(new_fmt) != '\0'							      \
+   && (rp = strptime_internal (rp, (new_fmt), tm, decided)) != NULL)
 
-#define _TIME_LOCALE(loc) \
-((_TimeLocale *)((loc)->part_impl[(size_t)LC_TIME]))
-
-/*
-  * We do not implement alternate representations. However, we always
-* check whether a given modifier is allowed for a certain conversion.
-*/
-  #define ALT_E			0x01
-  #define ALT_O			0x02
-  #define LEGAL_ALT(x)		{ if (alt_format & ~(x)) return NULL; }
-
-  #define S_YEAR			(1 << 0)
-  #define S_MON			(1 << 1)
-  #define S_YDAY			(1 << 2)
-  #define S_MDAY			(1 << 3)
-  #define S_WDAY			(1 << 4)
-  #define S_HOUR			(1 << 5)
-
-#define HAVE_MDAY(s)		(s & S_MDAY)
-#define HAVE_MON(s)		(s & S_MON)
-#define HAVE_WDAY(s)		(s & S_WDAY)
-#define HAVE_YDAY(s)		(s & S_YDAY)
-#define HAVE_YEAR(s)		(s & S_YEAR)
-#define HAVE_HOUR(s)		(s & S_HOUR)
-
-static char utc[] = { "UTC" };
-/* RFC-822/RFC-2822 */
-  static const char * const nast[5] = {
-    "EST",    "CST",    "MST",    "PST",    "\0\0\0"
+ /* This version: may overwrite these with versions for the locale */
+ static char weekday_name[][20] =
+ {
+   "Sunday", "Monday", "Tuesday", "Wednesday",
+   "Thursday", "Friday", "Saturday"
+ };
+static char ab_weekday_name[][10] =
+  {
+  "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
   };
-static const char * const nadt[5] = {
-  "EDT",    "CDT",    "MDT",    "PDT",    "\0\0\0"
-};
-
-/*
-  * Table to determine the ordinal date for the start of a month.
-* Ref: http://en.wikipedia.org/wiki/ISO_week_date
-*/
-  static const int start_of_month[2][13] = {
-    /* non-leap year */
-    { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365 },
-    /* leap year */
-    { 0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366 }
+static char month_name[][20] =
+  {
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+  };
+static char ab_month_name[][10] =
+  {
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
   };
 
-/*
-  * Calculate the week day of the first day of a year. Valid for
-* the Gregorian calendar, which began Sept 14, 1752 in the UK
-* and its colonies. Ref:
-  * http://en.wikipedia.org/wiki/Determination_of_the_day_of_the_week
-*/
+static char am_pm[][4] = {"AM", "PM"};
 
-  static int
-first_wday_of(int yr)
+static int have_used_strptime = 0;
+
+static const unsigned short int __mon_yday[2][13] =
+  {
+  /* Normal years.  */
+  { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365 },
+  /* Leap years.  */
+  { 0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366 }
+  };
+
+
+/* Status of lookup: do we use the locale data or the raw data?  */
+enum locale_status { not, loc, raw };
+
+# define __isleap(year)	\
+((year) % 4 == 0 && ((year) % 100 != 0 || (year) % 400 == 0))
+
+/* Convert Windows date picture to POSIX style. The converted format string may not mach exactly. */
+void conv_winpic(char *win, char **posix)
 {
-  return ((2 * (3 - (yr / 100) % 4)) + (yr % 100) + ((yr % 100) /  4) +
-             (isleap(yr) ? 6 : 0) + 1) % 7;
+  char *src, *dst;
+
+  src = win;
+  *posix = dst = malloc(strlen(src) * 2 + 1);
+  while(*src)
+  {
+    if (src[0] == 'y')
+      if (src[1] == 'y')
+        if (src[2] == 'y')
+          if (src[3] == 'y')
+          {
+            strcpy(dst, "%Y");
+
+            if (src[4] == 'y')
+              src += 5; // yyyyy
+            else
+              src += 4; // yyyy
+
+            dst += 2;
+          }
+          else // yyy
+          {
+            // undefined
+            strcpy(dst, "yyy");
+            dst += 3;
+            src += 3;
+          }
+          else // yy
+          {
+            strcpy(dst, "%y");
+            dst += 2;
+            src += 2;
+          }
+          else // y
+          {
+            // impossible to convert properly
+            strcpy(dst, "%y");
+            dst += 2;
+            src++;
+          }
+          else if (src[0] == 'M')
+          {
+            if (src[1] == 'M')
+              if (src[2] == 'M')
+                if (src[3] == 'M') // MMMM
+                {
+                  strcpy(dst, "%b");
+                  src += 4;
+                }
+                else // MMM
+                {
+                  // impossible to convert properly
+                  strcpy(dst, "%m");
+                  src += 3;
+                }
+                else // MM
+                {
+                  strcpy(dst, "%m");
+                  src += 2;
+                }
+                else // M
+                {
+                  strcpy(dst, "%m");
+                  src += 1;
+                }
+
+                dst += 2;
+          }
+          else if (src[0] == 'd')
+          {
+            if (src[1] == 'd')
+              if (src[2] == 'd')
+                if (src[3] == 'd') // dddd
+                {
+                  strcpy(dst, "%a");
+                  src += 4;
+                }
+                else // ddd
+                {
+                  // impossible to convert properly
+                  strcpy(dst, "%d");
+                  src += 3;
+                }
+                else // dd
+                {
+                  strcpy(dst, "%d");
+                  src += 2;
+                }
+                else // d
+                {
+                  strcpy(dst, "%d");
+                  src++;
+                }
+
+                dst += 2;
+          }
+          else if (src[0] == 'g' && src[1] == 'g')
+            // impossible to convert
+            src += 2;
+          else if (src[0] == 'h')
+          {
+            strcpy(dst, "%I");
+            dst += 2;
+            if (src[1] == 'h')
+              src += 2;
+            else
+              src += 1;
+          }
+          else if (src[0] == 'H')
+          {
+            strcpy(dst, "%H");
+            dst += 2;
+            if (src[1] == 'H')
+              src += 2;
+            else
+              src += 1;
+          }
+          else if (src[0] == 'm')
+          {
+            strcpy(dst, "%M");
+            dst += 2;
+            if (src[1] == 'm')
+              src += 2;
+            else
+              src += 1;
+          }
+          else if (src[0] == 's')
+          {
+            strcpy(dst, "%S");
+            dst += 2;
+            if (src[1] == 's')
+              src += 2;
+            else
+              src += 1;
+          }
+          else if (src[0] == 't')
+          {
+            strcpy(dst, "%p");
+            dst += 2;
+            if (src[1] == 't')
+              src += 2;
+            else
+              src += 1;
+          }
+          else
+          {
+            *dst = *src;
+            dst++;
+            src++;
+          }
+  }
+
+  dst[0] = 0;
 }
 
-#define delim(p)	((p) == '\0' || isspace((unsigned char)(p)))
+/* Compute the day of the week.  */
+void
+  day_of_the_week (struct tm *tm)
+  {
+    /* We know that January 1st 1970 was a Thursday (= 4).  Compute the
+    the difference between this data in the one on TM and so determine
+    the weekday.  */
+    int corr_year = 1900 + tm->tm_year - (tm->tm_mon < 2);
+    int wday = (-473
+                  + (365 * (tm->tm_year - 70))
+                  + (corr_year / 4)
+                  - ((corr_year / 4) / 25) + ((corr_year / 4) % 25 < 0)
+                  + (((corr_year / 4) / 25) / 4)
+                  + __mon_yday[0][tm->tm_mon]
+                  + tm->tm_mday - 1);
+                  tm->tm_wday = ((wday % 7) + 7) % 7;
+  }
 
-static int
-fromzone(const unsigned char **bp, struct tm *tm, int mandatory)
-{
-  timezone_t tz;
-  char buf[512], *p;
-  const unsigned char *rp;
-
-  for (p = buf, rp = *bp; !delim(*rp) && p < &buf[sizeof(buf) - 1]; rp++)
-    *p++ = *rp;
-  *p = '\0';
-
-  if (mandatory)
-    *bp = rp;
-  if (!isalnum((unsigned char)*buf))
-    return 0;
-  tz = tzalloc(buf);
-  if (tz == NULL)
-    return 0;
-
-  *bp = rp;
-  tm->tm_isdst = 0;	/* XXX */
-    #ifdef TM_GMTOFF
-    tm->TM_GMTOFF = tzgetgmtoff(tz, tm->tm_isdst);
-  #endif
-  #ifdef TM_ZONE
-  // Can't use tzgetname() here because we are going to free()
-  tm->TM_ZONE = NULL; /* XXX */
-  #endif
-  tzfree(tz);
-  return 1;
-}
+/* Compute the day of the year.  */
+void
+  day_of_the_year (struct tm *tm)
+  {
+    tm->tm_yday = (__mon_yday[__isleap (1900 + tm->tm_year)][tm->tm_mon]
+                     + (tm->tm_mday - 1));
+  }
 
 char *
-strptime(const char *buf, const char *fmt, struct tm *tm)
-{
-  return strptime_l(buf, fmt, tm, _current_locale());
-}
+  strptime_internal (const char *rp, const char *fmt, struct tm *tm,
+                     enum locale_status *decided)
+  {
+    const char *rp_backup;
+    int cnt;
+    size_t val;
+    int have_I, is_pm;
+    int century, want_century;
+    int have_wday, want_xday;
+    int have_yday;
+    int have_mon, have_mday;
 
-char *
-strptime_l(const char *buf, const char *fmt, struct tm *tm, locale_t loc)
-{
-  unsigned char c;
-  const unsigned char *bp, *ep, *zname;
-  int alt_format, i, split_year = 0, neg = 0, state = 0,
-  day_offset = -1, week_offset = 0, offs, mandatory;
-  const char *new_fmt;
+    have_I = is_pm = 0;
+    century = -1;
+    want_century = 0;
+    have_wday = want_xday = have_yday = have_mon = have_mday = 0;
 
-  bp = (const u_char *)buf;
-
-  while (bp != NULL && (c = *fmt++) != '\0') {
-  /* Clear `alternate' modifier prior to new conversion. */
-    alt_format = 0;
-    i = 0;
-
-    /* Eat up white-space. */
-      if (isspace(c)) {
-        while (isspace(*bp))
-          bp++;
+    while (*fmt != '\0')
+    {
+      /* A white space in the format string matches 0 more or white
+      space in the input string.  */
+      if (isspace (*fmt))
+      {
+        while (isspace (*rp))
+          ++rp;
+        ++fmt;
         continue;
       }
 
-    if (c != '%')
-      goto literal;
+      /* Any character but `%' must be matched by the same character
+      in the iput string.  */
+      if (*fmt != '%')
+      {
+        match_char (*fmt++, *rp++);
+        continue;
+      }
 
+      ++fmt;
 
-    again:		switch (c = *fmt++) {
-      case '%':	/* "%%" is converted to "%". */
-        literal:
-        if (c != *bp++)
+      /* We need this for handling the `E' modifier.  */
+      start_over:
+
+        /* Make back up of current processing pointer.  */
+        rp_backup = rp;
+
+      switch (*fmt++)
+      {
+      case '%':
+        /* Match the `%' character itself.  */
+        match_char ('%', *rp++);
+        break;
+      case 'a':
+      case 'A':
+        /* Match day of week.  */
+        for (cnt = 0; cnt < 7; ++cnt)
+        {
+          if (*decided != loc
+                && (match_string (weekday_name[cnt], rp)
+                      || match_string (ab_weekday_name[cnt], rp)))
+          {
+            *decided = raw;
+            break;
+          }
+        }
+        if (cnt == 7)
+          /* Does not match a weekday name.  */
           return NULL;
-      LEGAL_ALT(0);
-      continue;
+        tm->tm_wday = cnt;
+        have_wday = 1;
+        break;
+      case 'b':
+      case 'B':
+      case 'h':
+        /* Match month name.  */
+        for (cnt = 0; cnt < 12; ++cnt)
+        {
+          if (match_string (month_name[cnt], rp)
+                || match_string (ab_month_name[cnt], rp))
+          {
+            *decided = raw;
+            break;
+          }
+        }
+        if (cnt == 12)
+          /* Does not match a month name.  */
+          return NULL;
+        tm->tm_mon = cnt;
+        want_xday = 1;
+        break;
+      case 'c':
+        /* Match locale's date and time format.  */
+        return strptime_internal (rp, "%x %X", tm, decided);
+        break;
+      case 'C':
+        /* Match century number.  */
+        get_number (0, 99, 2);
+        century = val;
+        want_xday = 1;
+        break;
+      case 'd':
+      case 'e':
+        /* Match day of month.  */
+        get_number (1, 31, 2);
+        tm->tm_mday = val;
+        have_mday = 1;
+        want_xday = 1;
+        break;
+      case 'F':
+        if (!recursive ("%Y-%m-%d"))
+          return NULL;
+        want_xday = 1;
+        break;
+      case 'x':
+        {
+          char *pic;
+          unsigned int loc;
+          char winpic[100];
+          int ret;
 
-      /*
-        * "Alternative" modifiers. Just set the appropriate flag
-      * and start over again.
-      */
-        case 'E':	/* "%E?" alternative conversion modifier. */
-        LEGAL_ALT(0);
-      alt_format |= ALT_E;
-      goto again;
+          loc = GetThreadLocale();
+          GetLocaleInfo(loc, LOCALE_SSHORTDATE, winpic, 100);
 
-      case 'O':	/* "%O?" alternative conversion modifier. */
-        LEGAL_ALT(0);
-      alt_format |= ALT_O;
-      goto again;
+          conv_winpic(winpic, &pic);
+          ret = recursive(pic);
+          free(pic);
+          if (!ret)
+            return NULL;
+          want_xday = 1;
+        }
+        break;
+      case 'D':
+        /* Match standard day format.  */
+        if (!recursive ("%m/%d/%y"))
+          return NULL;
+        want_xday = 1;
+        break;
+      case 'k':
+      case 'H':
+        /* Match hour in 24-hour clock.  */
+        get_number (0, 23, 2);
+        tm->tm_hour = val;
+        have_I = 0;
+        break;
+      case 'I':
+        /* Match hour in 12-hour clock.  */
+        get_number (1, 12, 2);
+        tm->tm_hour = val % 12;
+        have_I = 1;
+        break;
+      case 'j':
+        /* Match day number of year.  */
+        get_number (1, 366, 3);
+        tm->tm_yday = val - 1;
+        have_yday = 1;
+        break;
+      case 'm':
+        /* Match number of month.  */
+        get_number (1, 12, 2);
+        tm->tm_mon = val - 1;
+        have_mon = 1;
+        want_xday = 1;
+        break;
+      case 'M':
+        /* Match minute.  */
+        get_number (0, 59, 2);
+        tm->tm_min = val;
+        break;
+      case 'n':
+      case 't':
+        /* Match any white space.  */
+        while (isspace (*rp))
+          ++rp;
+        break;
+      case 'p':
+        /* Match locale's equivalent of AM/PM.  */
+        if (!match_string (am_pm[0], rp))
+          if (match_string (am_pm[1], rp))
+            is_pm = 1;
+          else
+            return NULL;
+          break;
+      case 'r':
+        return strptime_internal (rp, "%x %X", tm, decided);
+        break;
+      case 'R':
+        if (!recursive ("%H:%M"))
+          return NULL;
+        break;
+      case 's':
+        {
+          /* The number of seconds may be very high so we cannot use
+          the `get_number' macro.  Instead read the number
+          character for character and construct the result while
+          doing this.  */
+          time_t secs = 0;
+          if (*rp < '0' || *rp > '9')
+            /* We need at least one digit.  */
+            return NULL;
 
-      /*
-        * "Complex" conversion rules, implemented through recursion.
-      */
-        case 'c':	/* Date and time, using the locale's format. */
-      new_fmt = _TIME_LOCALE(loc)->d_t_fmt;
-      state |= S_WDAY | S_MON | S_MDAY | S_YEAR;
-      goto recurse;
+          do
+          {
+            secs *= 10;
+            secs += *rp++ - '0';
+          }
+          while (*rp >= '0' && *rp <= '9');
 
-      case 'D':	/* The date as "%m/%d/%y". */
-      new_fmt = "%m/%d/%y";
-      LEGAL_ALT(0);
-      state |= S_MON | S_MDAY | S_YEAR;
-      goto recurse;
+          if ((tm = localtime (&secs)) == NULL)
+            /* Error in function.  */
+            return NULL;
+        }
+        break;
+      case 'S':
+        get_number (0, 61, 2);
+        tm->tm_sec = val;
+        break;
+      case 'X':
+        {
+          char *pic;
+          unsigned int loc;
+          char winpic[100];
+          int ret;
 
-      case 'F':	/* The date as "%Y-%m-%d". */
-      new_fmt = "%Y-%m-%d";
-      LEGAL_ALT(0);
-      state |= S_MON | S_MDAY | S_YEAR;
-      goto recurse;
+          loc = GetThreadLocale();
+          GetLocaleInfo(loc, LOCALE_STIMEFORMAT, winpic, 100);
 
-      case 'R':	/* The time as "%H:%M". */
-      new_fmt = "%H:%M";
-      LEGAL_ALT(0);
-      goto recurse;
+          conv_winpic(winpic, &pic);
+          ret = recursive(pic);
+          free(pic);
+          if (!ret)
+            return NULL;
+        }
+        break;
+      case 'T':
+        return strptime_internal (rp, "%H:%M:%S", tm, decided);
+        break;
+      case 'u':
+        get_number (1, 7, 1);
+        tm->tm_wday = val % 7;
+        have_wday = 1;
+        break;
+      case 'g':
+        get_number (0, 99, 2);
+        /* XXX This cannot determine any field in TM.  */
+        break;
+      case 'G':
+        if (*rp < '0' || *rp > '9')
+          return NULL;
+        /* XXX Ignore the number since we would need some more
+        information to compute a real date.  */
+        do
+          ++rp;
+        while (*rp >= '0' && *rp <= '9');
+        break;
+      case 'U':
+      case 'V':
+      case 'W':
+        get_number (0, 53, 2);
+        /* XXX This cannot determine any field in TM without some
+        information.  */
+        break;
+      case 'w':
+        /* Match number of weekday.  */
+        get_number (0, 6, 1);
+        tm->tm_wday = val;
+        have_wday = 1;
+        break;
+      case 'y':
+        /* Match year within century.  */
+        get_number (0, 99, 2);
+        /* The "Year 2000: The Millennium Rollover" paper suggests that
+        values in the range 69-99 refer to the twentieth century.  */
+        tm->tm_year = val >= 69 ? val : val + 100;
+        /* Indicate that we want to use the century, if specified.  */
+        want_century = 1;
+        want_xday = 1;
+        break;
+      case 'Y':
+        /* Match year including century number.  */
+        get_number (0, 9999, 4);
+        tm->tm_year = val - 1900;
+        want_century = 0;
+        want_xday = 1;
+        break;
+      case 'Z':
+        /* XXX How to handle this?  */
+        break;
+      case 'E':
+        /* We have no information about the era format.  Just use
+        the normal format.  */
+        if (*fmt != 'c' && *fmt != 'C' && *fmt != 'y' && *fmt != 'Y'
+              && *fmt != 'x' && *fmt != 'X')
+          /* This is an invalid format.  */
+          return NULL;
 
-      case 'r':	/* The time in 12-hour clock representation. */
-      new_fmt = _TIME_LOCALE(loc)->t_fmt_ampm;
-      LEGAL_ALT(0);
-      goto recurse;
-
-      case 'T':	/* The time as "%H:%M:%S". */
-      new_fmt = "%H:%M:%S";
-      LEGAL_ALT(0);
-      goto recurse;
-
-      case 'X':	/* The time, using the locale's format. */
-        new_fmt = _TIME_LOCALE(loc)->t_fmt;
-        goto recurse;
-
-        case 'x':	/* The date, using the locale's format. */
-        new_fmt = _TIME_LOCALE(loc)->d_fmt;
-        state |= S_MON | S_MDAY | S_YEAR;
-        recurse:
-        bp = (const u_char *)strptime((const char *)bp,
-        new_fmt, tm);
-        LEGAL_ALT(ALT_E);
-        continue;
-
-        /*
-        * "Elementary" conversion rules.
-        */
-        case 'A':	/* The day of week, using the locale's form. */
-          case 'a':
-          bp = find_string(bp, &tm->tm_wday,
-                           _TIME_LOCALE(loc)->day, _TIME_LOCALE(loc)->abday, 7);
-          LEGAL_ALT(0);
-          state |= S_WDAY;
-          continue;
-
-          case 'B':	/* The month, using the locale's form. */
-          case 'b':
-          case 'h':
-          bp = find_string(bp, &tm->tm_mon,
-          _TIME_LOCALE(loc)->mon, _TIME_LOCALE(loc)->abmon,
-          12);
-          LEGAL_ALT(0);
-          state |= S_MON;
-          continue;
-
-          case 'C':	/* The century number. */
-          i = 20;
-          bp = conv_num(bp, &i, 0, 99);
-
-          i = i * 100 - TM_YEAR_BASE;
-          if (split_year)
-          i += tm->tm_year % 100;
-          split_year = 1;
-          tm->tm_year = i;
-          LEGAL_ALT(ALT_E);
-          state |= S_YEAR;
-          continue;
-
-          case 'd':	/* The day of month. */
-          case 'e':
-          bp = conv_num(bp, &tm->tm_mday, 1, 31);
-          LEGAL_ALT(ALT_O);
-          state |= S_MDAY;
-          continue;
-
-          case 'k':	/* The hour (24-hour clock representation). */
-          LEGAL_ALT(0);
-          /* FALLTHROUGH */
-          case 'H':
-          bp = conv_num(bp, &tm->tm_hour, 0, 23);
-          LEGAL_ALT(ALT_O);
-          state |= S_HOUR;
-          continue;
-
-          case 'l':	/* The hour (12-hour clock representation). */
-          LEGAL_ALT(0);
-          /* FALLTHROUGH */
-          case 'I':
-          bp = conv_num(bp, &tm->tm_hour, 1, 12);
-          if (tm->tm_hour == 12)
-          tm->tm_hour = 0;
-          LEGAL_ALT(ALT_O);
-          state |= S_HOUR;
-          continue;
-
-          case 'j':	/* The day of year. */
-          i = 1;
-          bp = conv_num(bp, &i, 1, 366);
-          tm->tm_yday = i - 1;
-          LEGAL_ALT(0);
-          state |= S_YDAY;
-          continue;
-
-          case 'M':	/* The minute. */
-          bp = conv_num(bp, &tm->tm_min, 0, 59);
-          LEGAL_ALT(ALT_O);
-          continue;
-
-          case 'm':	/* The month. */
-          i = 1;
-          bp = conv_num(bp, &i, 1, 12);
-          tm->tm_mon = i - 1;
-          LEGAL_ALT(ALT_O);
-          state |= S_MON;
-          continue;
-
-          case 'p':	/* The locale's equivalent of AM/PM. */
-            bp = find_string(bp, &i, _TIME_LOCALE(loc)->am_pm,
-                             NULL, 2);
-            if (HAVE_HOUR(state) && tm->tm_hour > 11)
-              return NULL;
-            tm->tm_hour += i * 12;
-            LEGAL_ALT(0);
-            continue;
-
-            case 'S':	/* The seconds. */
-              bp = conv_num(bp, &tm->tm_sec, 0, 61);
-              LEGAL_ALT(ALT_O);
-              continue;
-
-              #ifndef TIME_MAX
-              #define TIME_MAX	INT64_MAX
-              #endif
-              case 's':	/* seconds since the epoch */
-              {
-                time_t sse = 0;
-                uint64_t rulim = TIME_MAX;
-
-                if (*bp < '0' || *bp > '9') {
-                  bp = NULL;
-                  continue;
-                }
-
-                do {
-                  sse *= 10;
-                  sse += *bp++ - '0';
-                  rulim /= 10;
-                } while ((sse * 10 <= TIME_MAX) &&
-                         rulim && *bp >= '0' && *bp <= '9');
-
-                if (sse < 0 || (uint64_t)sse > TIME_MAX) {
-                  bp = NULL;
-                  continue;
-                }
-
-                if (localtime_r(&sse, tm) == NULL)
-                  bp = NULL;
-                else
-                  state |= S_YDAY | S_WDAY |
-                  S_MON | S_MDAY | S_YEAR;
-              }
-              continue;
-
-              case 'U':	/* The week of year, beginning on sunday. */
-                case 'W':	/* The week of year, beginning on monday. */
-                /*
-                * XXX This is bogus, as we can not assume any valid
-              * information present in the tm structure at this
-              * point to calculate a real value, so just check the
-              * range for now.
-              */
-                bp = conv_num(bp, &i, 0, 53);
-              LEGAL_ALT(ALT_O);
-              if (c == 'U')
-                day_offset = TM_SUNDAY;
-              else
-                day_offset = TM_MONDAY;
-              week_offset = i;
-              continue;
-
-              case 'w':	/* The day of week, beginning on sunday. */
-                bp = conv_num(bp, &tm->tm_wday, 0, 6);
-              LEGAL_ALT(ALT_O);
-              state |= S_WDAY;
-              continue;
-
-              case 'u':	/* The day of week, monday = 1. */
-                bp = conv_num(bp, &i, 1, 7);
-              tm->tm_wday = i % 7;
-              LEGAL_ALT(ALT_O);
-              state |= S_WDAY;
-              continue;
-
-              case 'g':	/* The year corresponding to the ISO week
-              * number but without the century.
-              */
-                bp = conv_num(bp, &i, 0, 99);
-              continue;
-
-              case 'G':	/* The year corresponding to the ISO week
-              * number with century.
-              */
-                do
-              bp++;
-              while (isdigit(*bp));
-              continue;
-
-              case 'V':	/* The ISO 8601:1988 week number as decimal */
-                bp = conv_num(bp, &i, 0, 53);
-              continue;
-
-              case 'Y':	/* The year. */
-                i = TM_YEAR_BASE;	/* just for data sanity... */
-                bp = conv_num(bp, &i, 0, 9999);
-              tm->tm_year = i - TM_YEAR_BASE;
-              LEGAL_ALT(ALT_E);
-              state |= S_YEAR;
-              continue;
-
-              case 'y':	/* The year within 100 years of the epoch. */
-                /* LEGAL_ALT(ALT_E | ALT_O); */
-                bp = conv_num(bp, &i, 0, 99);
-
-              if (split_year)
-                /* preserve century */
-                i += (tm->tm_year / 100) * 100;
-              else {
-                split_year = 1;
-                if (i <= 68)
-                  i = i + 2000 - TM_YEAR_BASE;
-                else
-                  i = i + 1900 - TM_YEAR_BASE;
-              }
-              tm->tm_year = i;
-              state |= S_YEAR;
-              continue;
-
-              case 'Z':
-                case 'z':
-                tzset();
-              mandatory = c == 'z';
-              /*
-                * We recognize all ISO 8601 formats:
-                * Z	= Zulu time/UTC
-              * [+-]hhmm
-              * [+-]hh:mm
-              * [+-]hh
-              * We recognize all RFC-822/RFC-2822 formats:
-                * UT|GMT
-              *          North American : UTC offsets
-              * E[DS]T = Eastern : -4 | -5
-              * C[DS]T = Central : -5 | -6
-              * M[DS]T = Mountain: -6 | -7
-              * P[DS]T = Pacific : -7 | -8
-              *          Nautical/Military
-              * [A-IL-M] = -1 ... -9 (J not used)
-              * [N-Y]  = +1 ... +12
-              * Note: J maybe used to denote non-nautical
-              *       local time
-              */
-                if (mandatory)
-                  while (isspace(*bp))
-                    bp++;
-
-              zname = bp;
-              switch (*bp++) {
-                case 'G':
-                  if (*bp++ != 'M')
-                    goto namedzone;
-                /*FALLTHROUGH*/
-                  case 'U':
-                  if (*bp++ != 'T')
-                    goto namedzone;
-                else if (!delim(*bp) && *bp++ != 'C')
-                  goto namedzone;
-                /*FALLTHROUGH*/
-                  case 'Z':
-                  if (!delim(*bp))
-                    goto namedzone;
-                tm->tm_isdst = 0;
-                #ifdef TM_GMTOFF
-                tm->TM_GMTOFF = 0;
-                #endif
-                #ifdef TM_ZONE
-                tm->TM_ZONE = utc;
-                #endif
-                continue;
-                case '+':
-                  neg = 0;
-                  break;
-                  case '-':
-                    neg = 1;
-                    break;
-                    default:
-                      namedzone:
-                      bp = zname;
-
-                      /* Nautical / Military style */
-                        if (delim(bp[1]) &&
-                            ((*bp >= 'A' && *bp <= 'I') ||
-                             (*bp >= 'L' && *bp <= 'Y'))) {
-                          #ifdef TM_GMTOFF
-                          /* Argh! No 'J'! */
-                            if (*bp >= 'A' && *bp <= 'I')
-                              tm->TM_GMTOFF =
-                                ('A' - 1) - (int)*bp;
-                              else if (*bp >= 'L' && *bp <= 'M')
-                                tm->TM_GMTOFF = 'A' - (int)*bp;
-                                else if (*bp >= 'N' && *bp <= 'Y')
-                                  tm->TM_GMTOFF = (int)*bp - 'M';
-                                  tm->TM_GMTOFF *= SECSPERHOUR;
-                                  #endif
-                                  #ifdef TM_ZONE
-                                  tm->TM_ZONE = NULL; /* XXX */
-                                    #endif
-                                    bp++;
-                                  continue;
-                        }
-                      /* 'J' is local time */
-                        if (delim(bp[1]) && *bp == 'J') {
-                          #ifdef TM_GMTOFF
-                          tm->TM_GMTOFF = -timezone;
-                          #endif
-                          #ifdef TM_ZONE
-                          tm->TM_ZONE = NULL; /* XXX */
-                            #endif
-                            bp++;
-                          continue;
-                        }
-
-                      /*
-                        * From our 3 letter hard-coded table
-                      * XXX: Can be removed, handled by tzload()
-                      */
-                        if (delim(bp[0]) || delim(bp[1]) ||
-                            delim(bp[2]) || !delim(bp[3]))
-                          goto loadzone;
-                      ep = find_string(bp, &i, nast, NULL, 4);
-                      if (ep != NULL) {
-                        #ifdef TM_GMTOFF
-                        tm->TM_GMTOFF = (-5 - i) * SECSPERHOUR;
-                        #endif
-                        #ifdef TM_ZONE
-                        tm->TM_ZONE = __UNCONST(nast[i]);
-                        #endif
-                        bp = ep;
-                        continue;
-                      }
-                      ep = find_string(bp, &i, nadt, NULL, 4);
-                      if (ep != NULL) {
-                        tm->tm_isdst = 1;
-                        #ifdef TM_GMTOFF
-                        tm->TM_GMTOFF = (-4 - i) * SECSPERHOUR;
-                        #endif
-                        #ifdef TM_ZONE
-                        tm->TM_ZONE = __UNCONST(nadt[i]);
-                        #endif
-                        bp = ep;
-                        continue;
-                      }
-                      /*
-                        * Our current timezone
-                      */
-                        ep = find_string(bp, &i,
-                                         (const char * const *)tzname,
-                                         NULL, 2);
-                      if (ep != NULL) {
-                        tm->tm_isdst = i;
-                        #ifdef TM_GMTOFF
-                        tm->TM_GMTOFF = -timezone;
-                        #endif
-                        #ifdef TM_ZONE
-                        tm->TM_ZONE = tzname[i];
-                        #endif
-                        bp = ep;
-                        continue;
-                      }
-                      loadzone:
-                        /*
-                        * The hard way, load the zone!
-                        */
-                        if (fromzone(&bp, tm, mandatory))
-                          continue;
-                      goto out;
-              }
-              offs = 0;
-              for (i = 0; i < 4; ) {
-                if (isdigit(*bp)) {
-                  offs = offs * 10 + (*bp++ - '0');
-                  i++;
-                  continue;
-                }
-                if (i == 2 && *bp == ':') {
-                  bp++;
-                  continue;
-                }
-                break;
-              }
-              if (isdigit(*bp))
-                goto out;
-              switch (i) {
-                case 2:
-                  offs *= SECSPERHOUR;
-                  break;
-                  case 4:
-                    i = offs % 100;
-                    offs /= 100;
-                    if (i >= SECSPERMIN)
-                      goto out;
-                    /* Convert minutes into decimal */
-                      offs = offs * SECSPERHOUR + i * SECSPERMIN;
-                      break;
-                      default:
-                        out:
-                        if (mandatory)
-                          return NULL;
-                      bp = zname;
-                      continue;
-              }
-              if (offs >= (HOURSPERDAY * SECSPERHOUR))
-                goto out;
-              if (neg)
-                offs = -offs;
-              tm->tm_isdst = 0;	/* XXX */
-                #ifdef TM_GMTOFF
-                tm->TM_GMTOFF = offs;
-              #endif
-              #ifdef TM_ZONE
-              tm->TM_ZONE = NULL;	/* XXX */
-                #endif
-                continue;
-
-              /*
-                * Miscellaneous conversions.
-              */
-                case 'n':	/* Any kind of white-space. */
-                case 't':
-                while (isspace(*bp))
-                  bp++;
-              LEGAL_ALT(0);
-              continue;
-
-
-              default:	/* Unknown/unsupported conversion. */
-                return NULL;
+        goto start_over;
+      case 'O':
+        switch (*fmt++)
+        {
+        case 'd':
+        case 'e':
+          /* Match day of month using alternate numeric symbols.  */
+          get_alt_number (1, 31, 2);
+          tm->tm_mday = val;
+          have_mday = 1;
+          want_xday = 1;
+          break;
+        case 'H':
+          /* Match hour in 24-hour clock using alternate numeric
+          symbols.  */
+          get_alt_number (0, 23, 2);
+          tm->tm_hour = val;
+          have_I = 0;
+          break;
+        case 'I':
+          /* Match hour in 12-hour clock using alternate numeric
+          symbols.  */
+          get_alt_number (1, 12, 2);
+          tm->tm_hour = val - 1;
+          have_I = 1;
+          break;
+        case 'm':
+          /* Match month using alternate numeric symbols.  */
+          get_alt_number (1, 12, 2);
+          tm->tm_mon = val - 1;
+          have_mon = 1;
+          want_xday = 1;
+          break;
+        case 'M':
+          /* Match minutes using alternate numeric symbols.  */
+          get_alt_number (0, 59, 2);
+          tm->tm_min = val;
+          break;
+        case 'S':
+          /* Match seconds using alternate numeric symbols.  */
+          get_alt_number (0, 61, 2);
+          tm->tm_sec = val;
+          break;
+        case 'U':
+        case 'V':
+        case 'W':
+          get_alt_number (0, 53, 2);
+          /* XXX This cannot determine any field in TM without
+          further information.  */
+          break;
+        case 'w':
+          /* Match number of weekday using alternate numeric symbols.  */
+          get_alt_number (0, 6, 1);
+          tm->tm_wday = val;
+          have_wday = 1;
+          break;
+        case 'y':
+          /* Match year within century using alternate numeric symbols.  */
+          get_alt_number (0, 99, 2);
+          tm->tm_year = val >= 69 ? val : val + 100;
+          want_xday = 1;
+          break;
+        default:
+          return NULL;
+        }
+        break;
+      default:
+        return NULL;
+      }
     }
-  }
 
-if (!HAVE_YDAY(state) && HAVE_YEAR(state)) {
-  if (HAVE_MON(state) && HAVE_MDAY(state)) {
-    /* calculate day of year (ordinal date) */
-      tm->tm_yday =  start_of_month[isleap_sum(tm->tm_year,
-                                               TM_YEAR_BASE)][tm->tm_mon] + (tm->tm_mday - 1);
-      state |= S_YDAY;
-  } else if (day_offset != -1) {
-    /*
-      * Set the date to the first Sunday (or Monday)
-    * of the specified week of the year.
-    */
-      if (!HAVE_WDAY(state)) {
-        tm->tm_wday = day_offset;
-        state |= S_WDAY;
+    if (have_I && is_pm)
+      tm->tm_hour += 12;
+
+    if (century != -1)
+    {
+      if (want_century)
+        tm->tm_year = tm->tm_year % 100 + (century - 19) * 100;
+      else
+        /* Only the century, but not the year.  Strange, but so be it.  */
+        tm->tm_year = (century - 19) * 100;
+    }
+
+    if (want_xday && !have_wday) {
+      if ( !(have_mon && have_mday) && have_yday)  {
+        /* we don't have tm_mon and/or tm_mday, compute them */
+        int t_mon = 0;
+        while (__mon_yday[__isleap(1900 + tm->tm_year)][t_mon] <= tm->tm_yday)
+          t_mon++;
+        if (!have_mon)
+          tm->tm_mon = t_mon - 1;
+        if (!have_mday)
+          tm->tm_mday = tm->tm_yday - __mon_yday[__isleap(1900 + tm->tm_year)][t_mon - 1] + 1;
       }
-    tm->tm_yday = (7 -
-                     first_wday_of(tm->tm_year + TM_YEAR_BASE) +
-                     day_offset) % 7 + (week_offset - 1) * 7 +
-      tm->tm_wday  - day_offset;
-    state |= S_YDAY;
-  }
-}
+      day_of_the_week (tm);
+    }
+    if (want_xday && !have_yday)
+      day_of_the_year (tm);
 
-if (HAVE_YDAY(state) && HAVE_YEAR(state)) {
-  int isleap;
-
-  if (!HAVE_MON(state)) {
-    /* calculate month of day of year */
-      i = 0;
-      isleap = isleap_sum(tm->tm_year, TM_YEAR_BASE);
-      while (tm->tm_yday >= start_of_month[isleap][i])
-        i++;
-      if (i > 12) {
-        i = 1;
-        tm->tm_yday -= start_of_month[isleap][12];
-        tm->tm_year++;
-      }
-      tm->tm_mon = i - 1;
-      state |= S_MON;
+    return (char *) rp;
   }
 
-  if (!HAVE_MDAY(state)) {
-    /* calculate day of month */
-      isleap = isleap_sum(tm->tm_year, TM_YEAR_BASE);
-      tm->tm_mday = tm->tm_yday -
-        start_of_month[isleap][tm->tm_mon] + 1;
-      state |= S_MDAY;
+char *
+  strptime (const char *buf, const char *format, struct tm *tm)
+  {
+    enum locale_status decided;
+#ifdef HAVE_LOCALE_H
+    if(!have_used_strptime) {
+      get_locale_strings();
+      /* have_used_strptime = 1; might change locale during session */
+    }
+#endif
+    decided = raw;
+    return strptime_internal (buf, format, tm, &decided);
   }
 
-  if (!HAVE_WDAY(state)) {
-    /* calculate day of week */
-      i = 0;
-      week_offset = first_wday_of(tm->tm_year);
-      while (i++ <= tm->tm_yday) {
-        if (week_offset++ >= 6)
-          week_offset = 0;
-      }
-      tm->tm_wday = week_offset;
-      state |= S_WDAY;
-  }
-}
-
-return __UNCONST(bp);
-}
-
-
-static const u_char *
-  conv_num(const unsigned char *buf, int *dest, uint llim, uint ulim)
-{
-  uint result = 0;
-  unsigned char ch;
-
-  /* The limit also determines the number of valid digits. */
-    uint rulim = ulim;
-
-  ch = *buf;
-  if (ch < '0' || ch > '9')
-    return NULL;
-
-  do {
-    result *= 10;
-    result += ch - '0';
-    rulim /= 10;
-    ch = *++buf;
-  } while ((result * 10 <= ulim) && rulim && ch >= '0' && ch <= '9');
-
-  if (result < llim || result > ulim)
-    return NULL;
-
-  *dest = result;
-  return buf;
-  }
-
-static const u_char *
-  find_string(const u_char *bp, int *tgt, const char * const *n1,
-              const char * const *n2, int c)
+#ifdef HAVE_LOCALE_H
+void get_locale_strings(void)
 {
   int i;
-  size_t len;
+  struct tm tm;
+  char buff[4];
 
-  /* check full name - then abbreviated ones */
-    for (; n1 != NULL; n1 = n2, n2 = NULL) {
-      for (i = 0; i < c; i++, n1++) {
-        len = strlen(*n1);
-        if (strncasecmp(*n1, (const char *)bp, len) == 0) {
-          *tgt = i;
-          return bp + len;
-        }
-      }
-    }
-
-  /* Nothing matched */
-    return NULL;
+  tm.tm_sec = tm.tm_min = tm.tm_hour = tm.tm_mday = tm.tm_mon
+    = tm.tm_isdst = 0;
+  tm.tm_year = 30;
+  for(i = 0; i < 12; i++) {
+    tm.tm_mon = i;
+    strftime(ab_month_name[i], 10, "%b", &tm);
+    strftime(month_name[i], 20, "%B", &tm);
   }
+  tm.tm_mon = 0;
+  for(i = 0; i < 7; i++) {
+    tm.tm_mday = tm.tm_yday = i+1; /* 2000-1-2 was a Sunday */
+      tm.tm_wday = i;
+      strftime(ab_weekday_name[i], 10, "%a", &tm);
+      strftime(weekday_name[i], 20, "%A", &tm);
+  }
+  tm.tm_hour = 1;
+  /* in locales where these are unused, they may be empty: better
+  not to reset them then */
+  strftime(buff, 4, "%p", &tm);
+  if(strlen(buff)) strcpy(am_pm[0], buff);
+  tm.tm_hour = 13;
+  strftime(buff, 4, "%p", &tm);
+  if(strlen(buff)) strcpy(am_pm[1], buff);
+}
+#endif
+
 #endif
