@@ -36,6 +36,8 @@ char *strnstr(const char *haystack, const char *needle, size_t len)
   return NULL;
 }
 
+char *strptime(const char * __restrict, const char * __restrict, struct tm * __restrict);
+
 #else
 #define SET_BINARY_MODE(file)
 #endif
