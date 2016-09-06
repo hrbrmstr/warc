@@ -27,6 +27,10 @@ The following functions are implemented:
 
 ### Installation
 
+You need `wget` on your system `PATH`. Folks on real operating systems can do the `apt-get`, `yum install` or `brew install` (et al) dance for your particular system. Version 1.18+ is recommended, but any version with support for WARC extensions should do.
+
+Windows folks will need to grab the statically linked [32-bit](https://eternallybored.org/misc/wget/current/wget.exe) or [64-bit](https://eternallybored.org/misc/wget/current/wget64.exe) binaries from [here](https://eternallybored.org/misc/wget/) and put them on your system `PATH` somewhere if you want to create WARC files in bulk using `wget`.
+
 ``` r
 devtools::install_git("https://gitlab.com/hrbrmstr/warc.git")
 ```
@@ -166,7 +170,7 @@ library(testthat)
 date()
 ```
 
-    ## [1] "Tue Sep  6 14:11:03 2016"
+    ## [1] "Tue Sep  6 16:51:38 2016"
 
 ``` r
 test_dir("tests/")
