@@ -9,10 +9,33 @@ using namespace Rcpp;
 #include <iterator>
 
 #include <zlib.h>
+
 #if defined(MSDOS) || defined(OS2) || defined(WIN32) || defined(__CYGWIN__)
+
 #include <fcntl.h>
 #include <io.h>
 #define SET_BINARY_MODE(file) setmode(fileno(file), O_BINARY)
+
+char *strnstr(const char *haystack, const char *needle, size_t len)
+{
+  int i;
+  size_t needle_len;
+
+  /* segfault here if needle is not NULL terminated */
+  if (0 == (needle_len = strlen(needle)))
+    return (char *)haystack;
+
+  for (i=0; i<=(int)(len-needle_len); i++)
+  {
+    if ((haystack[0] == needle[0]) &&
+        (0 == strncmp(haystack, needle, needle_len)))
+      return (char *)haystack;
+
+    haystack++;
+  }
+  return NULL;
+}
+
 #else
 #define SET_BINARY_MODE(file)
 #endif
