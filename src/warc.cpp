@@ -62,7 +62,6 @@ RawVector gzip_inflate_from_pos(std::string path, size_t raw_stream_pos) {
   rv.reserve(CHUNK);
 
   SET_BINARY_MODE(source);
-  SET_BINARY_MODE(dest);
 
   strm.zalloc = R_zlib_alloc;
   strm.zfree = R_zlib_free;

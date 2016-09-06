@@ -15,13 +15,12 @@ using namespace Rcpp;
 #include <fcntl.h>
 #include <io.h>
 #define SET_BINARY_MODE(file) setmode(fileno(file), O_BINARY)
+#define ISWIN
 
-char *strnstr(const char *haystack, const char *needle, size_t len)
-{
+char *strnstr(const char *haystack, const char *needle, size_t len) {
   int i;
   size_t needle_len;
 
-  /* segfault here if needle is not NULL terminated */
   if (0 == (needle_len = strlen(needle)))
     return (char *)haystack;
 
@@ -35,8 +34,6 @@ char *strnstr(const char *haystack, const char *needle, size_t len)
   }
   return NULL;
 }
-
-extern strptime (const char *buf, const char *format, struct tm *tm);
 
 #else
 #define SET_BINARY_MODE(file)
@@ -60,7 +57,6 @@ extern strptime (const char *buf, const char *format, struct tm *tm);
 #include <errno.h>
 #include <stdint.h>
 #include <time.h>
-//#include <xlocale.h>
 
 #define _ISOC99_SOURCE
 #include <inttypes.h>
@@ -98,7 +94,7 @@ void int_create_cdx_from_warc(std::string warc_path,
   const char *warc_file = base.c_str();
 
   //bool is_gz = ends_with(warc_path, ".gz");
-  int res;
+  int res = 0;
   char buf[BUF_LEN];
 
   std::string::size_type len = field_spec.length();
@@ -115,7 +111,7 @@ void int_create_cdx_from_warc(std::string warc_path,
 
     char *line;
     char *key, val[BUF_LEN];
-    uintmax_t content_length;
+    uintmax_t content_length = 0;
     char warc_type[KEY_VAL_MAX];
     char urn[KEY_VAL_MAX];
     char target_uri[KEY_VAL_MAX];
@@ -189,7 +185,15 @@ void int_create_cdx_from_warc(std::string warc_path,
             content_length = strtoumax(val, NULL, 10);
             if (content_length == UINTMAX_MAX && errno == ERANGE)  exit(1);
           } else if (strcmp("WARC-Date", key) == 0) {
+#ifdef ISWIN
+            int sret =sscanf(val, "%d-%d-%dT%d:%d:%d",
+                              &ts.tm_year, &ts.tm_mon, &ts.tm_mday,
+                              &ts.tm_hour, &ts.tm_min, &ts.tm_sec);
+
+            cp = (sret==0) ? NULL : val;
+#else
             cp = strptime(val, "%Y-%m-%dT%H:%M:%S", &ts);
+#endif
             strcpy(warc_time, "-");
             if (cp != NULL) {
               size_t so = strftime(warc_time, TIME_MAX, "%Y%m%d%H%M%S", &ts);
