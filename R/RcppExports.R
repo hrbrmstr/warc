@@ -36,3 +36,28 @@ find_sequence <- function(buffer, pattern) {
     .Call('warc_find_sequence', PACKAGE = 'warc', buffer, pattern)
 }
 
+#' @export
+gz_open <- function(path) {
+    .Call('warc_gz_open', PACKAGE = 'warc', path)
+}
+
+#' @export
+gz_offset <- function(GZP) {
+    .Call('warc_gz_offset', PACKAGE = 'warc', GZP)
+}
+
+#' @export
+gz_write <- function(GZP, r_source) {
+    invisible(.Call('warc_gz_write', PACKAGE = 'warc', GZP, r_source))
+}
+
+#' @export
+gz_flush <- function(GZP) {
+    invisible(.Call('warc_gz_flush', PACKAGE = 'warc', GZP))
+}
+
+#' @export
+gz_close <- function(GZP) {
+    invisible(.Call('warc_gz_close', PACKAGE = 'warc', GZP))
+}
+
