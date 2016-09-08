@@ -21,8 +21,6 @@ struct _gz_fp {
 
 inline void finaliseGz(gz_fp* gzfp) {
   Rcout << "FREE" << std::endl;
-  free(gzfp);
-  // do nothing
 }
 
 typedef Rcpp::XPtr<gz_fp,Rcpp::PreserveStorage,finaliseGz> XPtrGz;
