@@ -91,7 +91,8 @@ create_warc(urls, warc_dir, warc_file="rfolks-warc")
 cdx <- read_cdx(file.path(warc_dir, "rfolks-warc.cdx"))
 
 sites <- map(1:nrow(cdx),
-             ~read_warc_entry(file.path(cdx$warc_path[.], cdx$file_name[.]), 
+             ~read_warc_entry(file.path(cdx$warc_path[.],
+                                        cdx$file_name[.]), 
                               cdx$compressed_arc_file_offset[.]))
 
 map(sites, ~read_html(content(., as="text", encoding="UTF-8"))) %>% 

@@ -6,7 +6,7 @@ as_warc <- function(x) {
 
   if (inherits(x, "response")) {
 
-    ah <- x$all_headers
+    ah <- x$all_headers %||% x$headers
     uri <- x$request$url
 
     purrr::map(ah, function(h) {

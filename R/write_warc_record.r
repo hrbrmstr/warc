@@ -11,18 +11,20 @@ write_warc_record <- function(warc_rec, warc_path, compressed=FALSE, append=TRUE
 
   warc_path <- path.expand(warc_path)
 
-  mode <- if (append) "ab" else "wb"
-  wf <- if (compressed) gzfile(warc_path, mode) else file(warc_path, mode)
+  # mode <- if (append) "ab" else "wb"
+  # wf <- if (compressed) gzfile(warc_path, mode) else file(warc_path, mode)
+  # cat(warc_rec$rendered_warc_header, file=wf, append=append)
+  # cat(warc_rec$rendered_response_header, file=wf, append=TRUE)
+  # if (!is.null(warc_rec$content)) writeBin(warc_rec$content, wf, useytes=TRUE)
+  # cat("\r\n\r\n", file=wf, append=TRUE) # two CRLFs after WARC record
+  # flush(wf)
+  # close(wf)
 
-  cat(warc_rec$rendered_warc_header, file=wf, append=append)
-  cat(warc_rec$rendered_response_header, file=wf, append=TRUE)
+  rv <- c(charToRaw(warc_rec$rendered_warc_header),
+          charToRaw(warc_rec$rendered_response_header))
+  if (!is.null(warc_rec$content)) rv <- c(rv, warc_rec$content)
+  rv <- c(rv, charToRaw("\r\n\r\n"))
 
-  if (!is.null(warc_rec$content)) writeBin(warc_rec$content, wf, useBytes=TRUE)
-
-  cat("\r\n\r\n", file=wf, append=TRUE) # two CRLFs after WARC record
-
-  flush(wf)
-
-  close(wf)
+  return(rv)
 
 }

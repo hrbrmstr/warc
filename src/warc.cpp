@@ -1,8 +1,6 @@
 #include <Rcpp.h>
 using namespace Rcpp;
 
-/* Shamelessly stolen from DTL's defunct Rcompression pkg */
-
 #include <zlib.h>
 
 #include <Rdefines.h>
@@ -112,6 +110,8 @@ RawVector gzip_inflate_from_pos(std::string path, size_t raw_stream_pos) {
 
 }
 
+/* Shamelessly stolen from DTL's defunct Rcompression pkg */
+
 // [[Rcpp::export]]
 SEXP gzuncompress(SEXP r_source, SEXP r_guess_size) {
 
@@ -129,26 +129,20 @@ SEXP gzuncompress(SEXP r_source, SEXP r_guess_size) {
   stream.zfree = R_zlib_free;
   stream.opaque = NULL;
 
-  /* The MAX_WBITS+16 incantation came from Pascal Scheffers' Tcl bindings for zlib. */
-  err = inflateInit2( &stream, MAX_WBITS + 16);
+  err = inflateInit2(&stream, MAX_WBITS+16);
   if(err != Z_OK) {
-    PROBLEM  "cannot establish the uncompres/inflate stream on this data (%d)", err
-    ERROR;
+    Rcpp::stop("cannot establish the uncompres/inflate stream on this data");
   }
-  /* inflate the entire thing.  XXX Need to put this in a loop where we extend the output buffer size if
-   it is too small at any point. Z_BUF_ERROR*/
+
   err = inflate(&stream, Z_FINISH);
 
-  if(err < 0) {
-    char *msg =  stream.msg; /*XXX should go away after next command and not be valid when we get to ERROR... but okay for now.*/
-  inflateEnd(&stream);
-  PROBLEM  "Failed to uncompress the raw data: (%d) %s", err, msg
-    ERROR;
+  if (err < 0) {
+    inflateEnd(&stream);
+    Rcpp::stop("Failed to uncompress the raw data");
   }
 
-  /* terminate our string. */
   len = stream.total_out;
-  /* clean up after ourselves. */
+
   inflateEnd(&stream);
 
   r_ans = Rf_allocVector(RAWSXP, stream.total_out);
