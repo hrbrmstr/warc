@@ -17,14 +17,6 @@ using namespace Rcpp;
 #include "R_ext/Memory.h"
 #include "R_ext/Utils.h"
 
-struct node {
-  gz_fp gzf;
-  node *next;
-};
-
-node gzlist = *(new node);
-node *lstail = &gzlist;
-
 //' Open a gzip file for reading or writing
 //'
 //' @param path path to file
@@ -53,12 +45,12 @@ XPtrGz gz_open(std::string path, std::string mode) {
   gzFile gzf = gzdopen(dup(fileno(wf)), gmode.c_str());
   gzbuffer(gzf, 16*1024*1024);
 
-  lstail->gzf.wfp = wf;
-  lstail->gzf.gzf = gzf;
+  gz_fp *fp = new gz_fp;
 
-  XPtrGz ptr(&(lstail->gzf));
-  lstail->next = new node;
-  lstail = lstail->next;
+  fp->wfp = wf;
+  fp->gzf = gzf;
+
+  XPtrGz ptr(fp);
 
   return(ptr);
 
@@ -74,7 +66,23 @@ int gz_offset(XPtrGz gzfile) {
   return(gzoffset(gzfile->gzf));
 }
 
+//' Sets the starting position for the next \code{gz_read()} or \code{gz_write()}
+//'
+//' @param offset represents a number of bytes in the uncompressed data stream and the
+//' @param from either "\code{start}" or "\code{current}"
+//' @return the resulting offset location as measured in bytes from the beginning of the
+//'   uncompressed stream, or –1 in case of error, in particular if the file is opened
+//'   for writing and the new starting position would be before the current position.
+//' @export
+// [[Rcpp::export]]
+z_off_t gz_seek(XPtrGz gzfile, z_off_t offset, std::string from) {
+  if (!gzfile) return(-1);
+  int whence = (from == "start") ? SEEK_SET : SEEK_CUR;
+  return(gzseek(gzfile->gzf, offset, whence));
+}
+
 //' Read from a gz file
+//'
 //' @export
 // [[Rcpp::export]]
 std::string gz_read_char(XPtrGz gzfile, unsigned len) {
