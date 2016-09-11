@@ -62,7 +62,7 @@ char *strnstr(const char *haystack, const char *needle, size_t len) {
 #include <inttypes.h>
 
 #define BUF_LEN 1024
-#define KEY_VAL_MAX 256
+#define KEY_VAL_MAX 1024
 #define TIME_MAX 32
 
 #define DEBUG 0
@@ -130,6 +130,8 @@ void int_create_cdx_from_warc(std::string warc_path,
     char warc_segment_number[KEY_VAL_MAX];
     char warc_segment_origin_id[KEY_VAL_MAX];
     char warc_segment_total_length[KEY_VAL_MAX];
+    char ct[KEY_VAL_MAX];
+    std::string cts;
     z_off_t warc_offset = 0;
     z_off_t u_warc_offset = 0;
     struct tm ts;
@@ -165,6 +167,7 @@ void int_create_cdx_from_warc(std::string warc_path,
       strcpy(status, "-");
       strcpy(mime_type, "-");
       strcpy(redirect, "-");
+      strcpy(ct, "-");
 
       buf[strcspn(buf, "\r\n")] = '\0';
 
@@ -181,6 +184,9 @@ void int_create_cdx_from_warc(std::string warc_path,
           if (strcmp("WARC-Record-ID", key) == 0) {
             strncpy(urn, val, KEY_VAL_MAX);
             warc_fields['u'] = std::string(urn);
+          } else if (strcmp("Content-Type", key) == 0) {
+            strncpy(ct, val, KEY_VAL_MAX);
+            cts = std::string(ct);
           } else if (strcmp("Content-Length", key) == 0) {
             content_length = strtoumax(val, NULL, 10);
             if (content_length == UINTMAX_MAX && errno == ERANGE)  exit(1);
@@ -240,7 +246,7 @@ void int_create_cdx_from_warc(std::string warc_path,
 
       }
 
-      if (strcmp("response", warc_type) == 0) {
+      if ((strcmp("response", warc_type) == 0) && (strcmp("text/dns", ct) != 0)) {
 
         warc_fields['V'] = std::to_string(warc_offset);
         warc_fields['v'] = std::to_string(u_warc_offset);
@@ -248,7 +254,6 @@ void int_create_cdx_from_warc(std::string warc_path,
         pre = gztell(gzf);
 
         line = gzgets(gzf, buf, BUF_LEN);
-
         buf[strcspn(buf, "\r\n")] = '\0';
         strtok(buf, " ");
         strcpy(status, strtok(NULL, " "));

@@ -92,10 +92,16 @@ RawVector gzip_inflate_from_pos(std::string path, size_t raw_stream_pos) {
       switch (ret) {
       case Z_NEED_DICT:
         ret = Z_DATA_ERROR;
-      case Z_DATA_ERROR:
-      case Z_MEM_ERROR:
         (void)inflateEnd(&strm);
+        Rcpp::stop("gzip deflate need dict error");
+        break;
+      case Z_DATA_ERROR:
+        (void)inflateEnd(&strm);
+        Rcpp::stop("gzip deflate data error");
+        break;
+      case Z_MEM_ERROR:
         Rcpp::stop("gzip deflate memory error");
+        break;
       }
       have = CHUNK - strm.avail_out;
       std::vector<unsigned char> tmp(out, out+have);
