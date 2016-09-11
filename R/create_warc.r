@@ -26,7 +26,7 @@
 #'   to the \code{system2} call \code{args}.
 #' @export
 #' @references \url{http://www.archiveteam.org/index.php?title=Wget_with_WARC_output}
-#' @note \code{"Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US) AppleWebKit/533.20.25 (KHTML, like Gecko) Version/5.0.4 Safari/533.20.27"}
+#' @note \code{"Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US)"}
 #'   is a good user agent to use for sites that are expecting a browser.
 #' @examples \dontrun{
 #' create_warc(c("http://rud.is/", "http://had.co.nz/",
@@ -34,7 +34,7 @@
 #'            "~/data/webarchive/example")
 #' cdx <- read_cdx("~/data/webarchive/example/r-warc.cdx")
 #' }
-create_warc <- function(url_list, warc_path=".", user_agent="r-warc", max_redirects=5,
+create_warc_wget <- function(url_list, warc_path=".", user_agent="r-warc", max_redirects=5,
                         tries=2, waitretry=1, timeout=5, warc_header="Source: R warc package",
                         warc_cdx=TRUE, warc_file="r-warc", no_warc_digests=TRUE,
                         no_warc_keep_log=TRUE, warc_max_size="1G", warc_tempdir=tempdir(),

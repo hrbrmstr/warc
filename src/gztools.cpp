@@ -20,7 +20,7 @@ using namespace Rcpp;
 //' Open a gzip file for reading or writing
 //'
 //' @param path path to file
-//' @param mode "\code{write}" or "\code{read}"
+//' @param mode "\code{write}", "\code{append}" or "\code{read}"
 //' @return handle to the file
 //' @export
 // [[Rcpp::export]]
@@ -29,7 +29,7 @@ XPtrGz gz_open(std::string path, std::string mode) {
   std::string fmode, gmode;
 
   if (mode == "append") {
-    fmode = "w+";
+    fmode = "a";
     gmode = "a9";
   } else if (mode == "write") {
     fmode = "w";
@@ -42,8 +42,9 @@ XPtrGz gz_open(std::string path, std::string mode) {
   }
 
   FILE *wf = fopen(path.c_str(), fmode.c_str());
+  // if (mode == "append") fseek(wf, 0L, SEEK_END);
   gzFile gzf = gzdopen(dup(fileno(wf)), gmode.c_str());
-  gzbuffer(gzf, 16*1024*1024);
+  gzbuffer(gzf, 32*1024);
 
   gz_fp *fp = new gz_fp;
 
@@ -105,8 +106,7 @@ std::string gz_read_char(XPtrGz gzfile, unsigned len) {
 //' @export
 // [[Rcpp::export]]
 void gz_write_raw(XPtrGz gzfile, SEXP buffer) {
-  if (!gzfile) return;
-  gzwrite(gzfile->gzf, RAW(buffer), GET_LENGTH(buffer));
+  if (gzfile) gzwrite(gzfile->gzf, RAW(buffer), GET_LENGTH(buffer));
 }
 
 //' Write an atomic character vector to a file
@@ -116,8 +116,7 @@ void gz_write_raw(XPtrGz gzfile, SEXP buffer) {
 //' @export
 // [[Rcpp::export]]
 void gz_write_char(XPtrGz gzfile, std::string buffer) {
-  if (!gzfile) return;
-  gzwrite(gzfile->gzf, buffer.c_str(), buffer.size());
+  if (gzfile) gzwrite(gzfile->gzf, buffer.c_str(), buffer.size());
 }
 
 //' Flush currenzt gzip stream
@@ -130,17 +129,18 @@ void gz_write_char(XPtrGz gzfile, std::string buffer) {
 //' @export
 // [[Rcpp::export]]
 void gz_flush(XPtrGz gzfile) {
-  if (!gzfile) return;
-  gzflush(gzfile->gzf, Z_FINISH);
+  if (gzfile) gzflush(gzfile->gzf, Z_FINISH);
 }
 
 //' Close the gz file
 //'
 //' @param gzfile file handle
+//' @param flush flush zlib buffers for the current file and terminate the gzip stream?
 //' @export
 // [[Rcpp::export]]
-void gz_close(XPtrGz gzfile) {
+void gz_close(XPtrGz gzfile, bool flush) {
   if (gzfile) {
+    if (flush) gz_flush(gzfile);
     gzclose(gzfile->gzf);
     fclose(gzfile->wfp);
   }

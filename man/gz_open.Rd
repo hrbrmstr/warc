@@ -9,7 +9,7 @@ gz_open(path, mode)
 \arguments{
 \item{path}{path to file}
 
-\item{mode}{"\code{write}" or "\code{read}"}
+\item{mode}{"\code{write}", "\code{append}" or "\code{read}"}
 }
 \value{
 handle to the file

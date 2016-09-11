@@ -5,43 +5,10 @@ int_create_cdx_from_warc <- function(warc_path, warc_record_types, field_spec, c
     invisible(.Call('warc_int_create_cdx_from_warc', PACKAGE = 'warc', warc_path, warc_record_types, field_spec, cdx_path))
 }
 
-#' Inflate a gzip stream from a file
-#'
-#' Given a gzip file that was built with concatenated individual gzip streams,
-#' this function will expand the contents of the stream into a \code{raw} vector
-#' and return it.
-#'
-#' @param path path to gzip individual stream compressed WARC file
-#' @param raw_stream_pos position in the raw file at \code{path} (not the "gzip
-#'   stream position")
-#' @note Since this is working with compressed files, the memory size of the returned
-#'   value may be quite large.
-#' @export
-gzip_inflate_from_pos <- function(path, raw_stream_pos) {
-    .Call('warc_gzip_inflate_from_pos', PACKAGE = 'warc', path, raw_stream_pos)
-}
-
-gzuncompress <- function(r_source, r_guess_size) {
-    .Call('warc_gzuncompress', PACKAGE = 'warc', r_source, r_guess_size)
-}
-
-#' Find the first occurrence (if any) of a sequence of raw bytes
-#' (\code{pattern}) in \code{buffer}.
-#'
-#' @param buffer vector to search in
-#' @param pattern sequence of bytes to look for
-#' @return index in \code{buffer} or \code{-1} if not found
-#' @export
-find_sequence <- function(buffer, pattern) {
-    .Call('warc_find_sequence', PACKAGE = 'warc', buffer, pattern)
-}
-
-<<<<<<< HEAD
-=======
 #' Open a gzip file for reading or writing
 #'
 #' @param path path to file
-#' @param mode "\code{write}" or "\code{read}"
+#' @param mode "\code{write}", "\code{append}" or "\code{read}"
 #' @return handle to the file
 #' @export
 gz_open <- function(path, mode) {
@@ -109,9 +76,40 @@ gz_flush <- function(gzfile) {
 #' Close the gz file
 #'
 #' @param gzfile file handle
+#' @param flush flush zlib buffers for the current file and terminate the gzip stream?
 #' @export
-gz_close <- function(gzfile) {
-    invisible(.Call('warc_gz_close', PACKAGE = 'warc', gzfile))
+gz_close <- function(gzfile, flush) {
+    invisible(.Call('warc_gz_close', PACKAGE = 'warc', gzfile, flush))
 }
 
->>>>>>> 04213db0456f62a27575c256468de00e8efbd897
+#' Inflate a gzip stream from a file
+#'
+#' Given a gzip file that was built with concatenated individual gzip streams,
+#' this function will expand the contents of the stream into a \code{raw} vector
+#' and return it.
+#'
+#' @param path path to gzip individual stream compressed WARC file
+#' @param raw_stream_pos position in the raw file at \code{path} (not the "gzip
+#'   stream position")
+#' @note Since this is working with compressed files, the memory size of the returned
+#'   value may be quite large.
+#' @export
+gzip_inflate_from_pos <- function(path, raw_stream_pos) {
+    .Call('warc_gzip_inflate_from_pos', PACKAGE = 'warc', path, raw_stream_pos)
+}
+
+gzuncompress <- function(r_source, r_guess_size) {
+    .Call('warc_gzuncompress', PACKAGE = 'warc', r_source, r_guess_size)
+}
+
+#' Find the first occurrence (if any) of a sequence of raw bytes
+#' (\code{pattern}) in \code{buffer}.
+#'
+#' @param buffer vector to search in
+#' @param pattern sequence of bytes to look for
+#' @return index in \code{buffer} or \code{-1} if not found
+#' @export
+find_sequence <- function(buffer, pattern) {
+    .Call('warc_find_sequence', PACKAGE = 'warc', buffer, pattern)
+}
+

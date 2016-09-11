@@ -20,7 +20,6 @@ struct _gz_fp {
 
 
 inline void finaliseGz(gz_fp* gzfp) {
-  Rcout << "FREE" << std::endl;
   if (gzfp) free(gzfp);
 }
 

@@ -162,8 +162,7 @@ SEXP gzuncompress(SEXP r_source, SEXP r_guess_size) {
 // [[Rcpp::export]]
 int find_sequence(RawVector buffer, RawVector pattern) {
   RawVector::iterator it;
-  it = std::search(buffer.begin(), buffer.end(),
-                   pattern.begin(), pattern.end());
+  it = std::search(buffer.begin(), buffer.end(), pattern.begin(), pattern.end());
   int pos = it - buffer.begin() + 1;
   if (pos > buffer.size()) pos = -1;
   return(pos);

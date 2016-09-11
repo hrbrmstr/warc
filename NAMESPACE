@@ -3,7 +3,7 @@
 S3method(print,cdx)
 export(as_warc)
 export(create_cdx)
-export(create_warc)
+export(create_warc_wget)
 export(expand)
 export(find_sequence)
 export(gz_close)
