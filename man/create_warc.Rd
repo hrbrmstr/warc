@@ -36,7 +36,10 @@ the content to a WARC archive for future use.
 }
 \details{
 \code{wget} must be available on the system \code{PATH} and be compiled with
-WARC support to use this function.
+WARC support to use this function. You can find statically linked binaries
+for 32- and 64-bit systems \href{https://eternallybored.org/misc/wget/current/wget.exe}{here}.
+Note that there some command line options are not available in the Windows version of
+\code{wget}.
 
 The defaults for the parameters do not "mirror" web sites but will follow a sane
 number of redirects and will grab the default content at the URLs in \code{url_list}.

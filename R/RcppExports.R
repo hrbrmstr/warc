@@ -36,3 +36,82 @@ find_sequence <- function(buffer, pattern) {
     .Call('warc_find_sequence', PACKAGE = 'warc', buffer, pattern)
 }
 
+<<<<<<< HEAD
+=======
+#' Open a gzip file for reading or writing
+#'
+#' @param path path to file
+#' @param mode "\code{write}" or "\code{read}"
+#' @return handle to the file
+#' @export
+gz_open <- function(path, mode) {
+    .Call('warc_gz_open', PACKAGE = 'warc', path, mode)
+}
+
+#' Return the current raw compressed offset in the file
+#'
+#' @param gzfile file handle
+#' @return offset position (integer)
+#' @export
+gz_offset <- function(gzfile) {
+    .Call('warc_gz_offset', PACKAGE = 'warc', gzfile)
+}
+
+#' Sets the starting position for the next \code{gz_read()} or \code{gz_write()}
+#'
+#' @param offset represents a number of bytes in the uncompressed data stream and the
+#' @param from either "\code{start}" or "\code{current}"
+#' @return the resulting offset location as measured in bytes from the beginning of the
+#'   uncompressed stream, or –1 in case of error, in particular if the file is opened
+#'   for writing and the new starting position would be before the current position.
+#' @export
+gz_seek <- function(gzfile, offset, from) {
+    .Call('warc_gz_seek', PACKAGE = 'warc', gzfile, offset, from)
+}
+
+#' Read from a gz file
+#'
+#' @export
+gz_read_char <- function(gzfile, len) {
+    .Call('warc_gz_read_char', PACKAGE = 'warc', gzfile, len)
+}
+
+#' Write a raw vector to a gz file
+#'
+#' @param gzfile file handle
+#' @param buffer raw vector to write
+#' @export
+gz_write_raw <- function(gzfile, buffer) {
+    invisible(.Call('warc_gz_write_raw', PACKAGE = 'warc', gzfile, buffer))
+}
+
+#' Write an atomic character vector to a file
+#'
+#' @param gzfile file handle
+#' @param buffer atomic character vector
+#' @export
+gz_write_char <- function(gzfile, buffer) {
+    invisible(.Call('warc_gz_write_char', PACKAGE = 'warc', gzfile, buffer))
+}
+
+#' Flush currenzt gzip stream
+#'
+#' This will flush all zlib output buffers for the current file
+#' and terminate the gzip stream. The next \code{gz_write()} will
+#' start a new gzip stream.
+#'
+#' @param gzfile file handle
+#' @export
+gz_flush <- function(gzfile) {
+    invisible(.Call('warc_gz_flush', PACKAGE = 'warc', gzfile))
+}
+
+#' Close the gz file
+#'
+#' @param gzfile file handle
+#' @export
+gz_close <- function(gzfile) {
+    invisible(.Call('warc_gz_close', PACKAGE = 'warc', gzfile))
+}
+
+>>>>>>> 04213db0456f62a27575c256468de00e8efbd897
