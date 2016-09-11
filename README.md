@@ -17,7 +17,7 @@ The following functions are implemented:
 
 -   `as_warc`: Convert an `httr::respone` object to WARC response objects
 -   `create_cdx`: Create a CDX from a WARC file
--   `create_warc`: Use wget to create a WARC archive for a URL list
+-   `create_warc_wget`: Use wget to create a WARC archive for a URL list
 -   `find_sequence`: Find the first occurrence (if any) of a sequence of raw bytes (`pattern`) in `buffer`
 -   `read_cdx`: Read a WARC CDX index file
 -   `read_warc_entry`: Read a WARC entry from a WARC file
@@ -143,12 +143,13 @@ urls <- c("http://rud.is/",
           "https://jeroenooms.github.io/",
           "https://ironholds.org/")
 
-create_warc(urls, warc_dir, warc_file="rfolks-warc")
+create_warc_wget(urls, warc_dir, warc_file="rfolks-warc")
 
 cdx <- read_cdx(file.path(warc_dir, "rfolks-warc.cdx"))
 
 sites <- map(1:nrow(cdx),
-             ~read_warc_entry(file.path(cdx$warc_path[.], cdx$file_name[.]), 
+             ~read_warc_entry(file.path(cdx$warc_path[.],
+                                        cdx$file_name[.]), 
                               cdx$compressed_arc_file_offset[.]))
 
 map(sites, ~read_html(content(., as="text", encoding="UTF-8"))) %>% 
@@ -170,7 +171,7 @@ library(testthat)
 date()
 ```
 
-    ## [1] "Tue Sep  6 16:51:38 2016"
+    ## [1] "Sun Sep 11 14:35:59 2016"
 
 ``` r
 test_dir("tests/")

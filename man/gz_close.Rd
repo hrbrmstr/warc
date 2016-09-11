@@ -4,10 +4,12 @@
 \alias{gz_close}
 \title{Close the gz file}
 \usage{
-gz_close(gzfile)
+gz_close(gzfile, flush)
 }
 \arguments{
 \item{gzfile}{file handle}
+
+\item{flush}{flush zlib buffers for the current file and terminate the gzip stream?}
 }
 \description{
 Close the gz file

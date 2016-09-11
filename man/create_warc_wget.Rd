@@ -50,9 +50,9 @@ number of redirects and will grab the default content at the URLs in \code{url_l
 }
 \examples{
 \dontrun{
-create_warc(c("http://rud.is/", "http://had.co.nz/",
-              "http://rstudio.com/", "http://rapid7.com/"),
-           "~/data/webarchive/example")
+create_warc_wget(c("http://rud.is/", "http://had.co.nz/",
+                   "http://rstudio.com/", "http://rapid7.com/"),
+                   "~/data/webarchive/example")
 cdx <- read_cdx("~/data/webarchive/example/r-warc.cdx")
 }
 }

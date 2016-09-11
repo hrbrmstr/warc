@@ -86,7 +86,7 @@ urls <- c("http://rud.is/",
           "https://jeroenooms.github.io/",
           "https://ironholds.org/")
 
-create_warc(urls, warc_dir, warc_file="rfolks-warc")
+create_warc_wget(urls, warc_dir, warc_file="rfolks-warc")
 
 cdx <- read_cdx(file.path(warc_dir, "rfolks-warc.cdx"))
 

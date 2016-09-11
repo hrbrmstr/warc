@@ -29,9 +29,9 @@
 #' @note \code{"Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US)"}
 #'   is a good user agent to use for sites that are expecting a browser.
 #' @examples \dontrun{
-#' create_warc(c("http://rud.is/", "http://had.co.nz/",
-#'               "http://rstudio.com/", "http://rapid7.com/"),
-#'            "~/data/webarchive/example")
+#' create_warc_wget(c("http://rud.is/", "http://had.co.nz/",
+#'                    "http://rstudio.com/", "http://rapid7.com/"),
+#'                    "~/data/webarchive/example")
 #' cdx <- read_cdx("~/data/webarchive/example/r-warc.cdx")
 #' }
 create_warc_wget <- function(url_list, warc_path=".", user_agent="r-warc", max_redirects=5,
