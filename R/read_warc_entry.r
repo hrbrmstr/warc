@@ -41,7 +41,7 @@ read_warc_entry <- function(path, start, compressed=grepl(".gz$", path)) {
       buffer <- buffer$result
     }
 
-  } else {
+  } else { # shld prbly refactor this since I built gz-tools
 
     fil <- file(path, "rb")
     seek(fil, start)
@@ -78,38 +78,43 @@ read_warc_entry <- function(path, start, compressed=grepl(".gz$", path)) {
 
 rwc_the_hard_way  <- function(path, start) {
 
+  message("Using the hard way")
+  message(start)
+
   w_pos <- start
 
   gzf <- gz_open(wf, "read")
-  gz_fseek(gzf, w_pos, "start")
+  gz_fseek(gzf, w_pos, "start") # seek to record start
 
-  w_rec <- c()
+  w_rec <- c() # header is small enough that we don't need to reserve space
 
-  repeat {
+  repeat { # read lines until we get to end of WARC header
     line <- gz_gets(gzf)
     if (line == "\r\n") break;
     w_rec <- c(w_rec, line)
   }
 
-  w_ofs <- gz_offset(gzf)
+  w_ofs <- gz_offset(gzf) # get position of the start of content
 
-  gz_close(gzf, TRUE)
+  gz_close(gzf)
 
-  c_len <- grep("^Content-Length: ", w_rec, value=TRUE)
+  c_len <- suppressWarnings(grep("^Content-Length: ", w_rec, value=TRUE))
 
   if (length(c_len) > 0) {
 
     c_len <- as.numeric(stri_match_first_regex(c_len, " ([[:digit:]]+)")[,2])
-    gzf <- gz_open(wf, "read")
 
+    gzf <- gz_open(wf, "read")
     gz_fseek(gzf, w_pos, "start")
+
     buffer <- gz_read_raw(gzf, sum(purrr::map_int(w_rec, nchar)) + 2 + c_len + 4)
-    gz_close(gzf, TRUE)
+
+    gz_close(gzf)
 
     buffer
 
   } else {
-    stop("Error reading WARC record from file", call.=FALSE)
+    stop("WARC record is invalid. No 'Content-Length:' WARC header found.", call.=FALSE)
   }
 
 }

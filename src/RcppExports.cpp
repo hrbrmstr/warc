@@ -32,13 +32,24 @@ BEGIN_RCPP
 END_RCPP
 }
 // gz_offset
-int gz_offset(XPtrGz gzfile);
+z_off_t gz_offset(XPtrGz gzfile);
 RcppExport SEXP warc_gz_offset(SEXP gzfileSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
     Rcpp::traits::input_parameter< XPtrGz >::type gzfile(gzfileSEXP);
     __result = Rcpp::wrap(gz_offset(gzfile));
+    return __result;
+END_RCPP
+}
+// gz_tell
+z_off_t gz_tell(XPtrGz gzfile);
+RcppExport SEXP warc_gz_tell(SEXP gzfileSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< XPtrGz >::type gzfile(gzfileSEXP);
+    __result = Rcpp::wrap(gz_tell(gzfile));
     return __result;
 END_RCPP
 }
@@ -92,14 +103,36 @@ BEGIN_RCPP
     return __result;
 END_RCPP
 }
+// gz_eof
+bool gz_eof(XPtrGz gzfile);
+RcppExport SEXP warc_gz_eof(SEXP gzfileSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< XPtrGz >::type gzfile(gzfileSEXP);
+    __result = Rcpp::wrap(gz_eof(gzfile));
+    return __result;
+END_RCPP
+}
 // gz_gets
-std::string gz_gets(XPtrGz gzfile);
+CharacterVector gz_gets(XPtrGz gzfile);
 RcppExport SEXP warc_gz_gets(SEXP gzfileSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;
     Rcpp::traits::input_parameter< XPtrGz >::type gzfile(gzfileSEXP);
     __result = Rcpp::wrap(gz_gets(gzfile));
+    return __result;
+END_RCPP
+}
+// gz_gets_raw
+RawVector gz_gets_raw(XPtrGz gzfile);
+RcppExport SEXP warc_gz_gets_raw(SEXP gzfileSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< XPtrGz >::type gzfile(gzfileSEXP);
+    __result = Rcpp::wrap(gz_gets_raw(gzfile));
     return __result;
 END_RCPP
 }
@@ -136,13 +169,12 @@ BEGIN_RCPP
 END_RCPP
 }
 // gz_close
-void gz_close(XPtrGz gzfile, bool flush);
-RcppExport SEXP warc_gz_close(SEXP gzfileSEXP, SEXP flushSEXP) {
+void gz_close(XPtrGz gzfile);
+RcppExport SEXP warc_gz_close(SEXP gzfileSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope __rngScope;
     Rcpp::traits::input_parameter< XPtrGz >::type gzfile(gzfileSEXP);
-    Rcpp::traits::input_parameter< bool >::type flush(flushSEXP);
-    gz_close(gzfile, flush);
+    gz_close(gzfile);
     return R_NilValue;
 END_RCPP
 }

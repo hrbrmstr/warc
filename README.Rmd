@@ -16,17 +16,32 @@ Possible use-cases:
 
 `warc` can work with WARC files that are composed of individual gzip streams or on plaintext WARC files and can also read & generate CDX files. Support for more file types (e.g. WET, WAT, etc) are planned.
 
+Since I ended up making some gz file functions for this package, it only seemed appropriate to expose them.
+
 The following functions are implemented:
 
-- `as_warc`:	Convert an `httr::respone` object to WARC response objects
-- `create_cdx`:	Create a CDX from a WARC file
-- `create_warc_wget`:	Use wget to create a WARC archive for a URL list
-- `find_sequence`:	Find the first occurrence (if any) of a sequence of raw bytes (`pattern`) in `buffer`
-- `read_cdx`:	Read a WARC CDX index file
-- `read_warc_entry`:	Read a WARC entry from a WARC file
-- `warc_headers`:	Extract WARC headers from a WARC response object
-- `create_warc`	Use wget to create a WARC archive for a URL list
-- `write_warc_record`:	Write a WARC record to a file
+- `as_warc`: Convert an ‘httr::respone’ object to WARC response objects
+- `create_cdx`: Takes as input an optionally compressed WARC file and creates a
+- `create_warc_wget`: Newer versions of ‘wget’ are designed to support capturing of or
+- `gz_close`: Close the gz file
+- `gz_eof`: Test for end of file
+- `gz_flush`: This will flush all zlib output buffers for the current file and
+- `gz_fseek`: Sets the starting position for the next ‘gz_read()’ or
+- `gz_gets`: Read a line from a gz file
+- `gz_gets_raw`: Read a line from a gz file
+- `gz_offset`: Return the current raw compressed offset in the file
+- `gz_open`: Open a gzip file for reading or writing
+- `gz_read_char`: Read from a gz file into a character vector
+- `gz_read_raw`: Read from a gz file into a raw vector
+- `gz_seek`: Sets the starting position for the next ‘gz_read()’ or
+- `gz_tell`: Return the current raw uncompressedf offset in the file
+- `gz_write_char`: Write an atomic character vector to a file
+- `gz_write_raw`: Write a raw vector to a gz file
+- `gzip_inflate_from_pos`: Given a gzip file that was built with concatenated individual gzip
+- `read_cdx`: CDX files are used to index the content of WARC files.
+- `read_warc_entry`: Given the path to a WARC file (compressed or uncompressed) and the
+- `warc_headers`: Extract WARC headers from a WARC response object
+- `write_warc_record`: Write a WARC record to a file
 
 ### Installation
 

@@ -4,7 +4,7 @@
 \alias{read_cdx}
 \title{Read a WARC CDX index file}
 \usage{
-read_cdx(path, warc_path = dirname(path))
+read_cdx(path, warc_path = NULL)
 }
 \arguments{
 \item{path}{path to CDX file}

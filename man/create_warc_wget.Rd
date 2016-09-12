@@ -7,9 +7,8 @@
 create_warc_wget(url_list, warc_path = ".", user_agent = "r-warc",
   max_redirects = 5, tries = 2, waitretry = 1, timeout = 5,
   warc_header = "Source: R warc package", warc_cdx = TRUE,
-  warc_file = "r-warc", no_warc_digests = TRUE, no_warc_keep_log = TRUE,
-  warc_max_size = "1G", warc_tempdir = tempdir(), no_output = TRUE,
-  .opts = NULL)
+  warc_file = "r-warc", no_warc_keep_log = TRUE, warc_max_size = "1G",
+  warc_tempdir = tempdir(), no_output = TRUE, .opts = NULL)
 }
 \arguments{
 \item{url_list}{character vector of URLs or a \code{connection} to a file
@@ -19,7 +18,7 @@ with one URL per line}
 
 \item{user_agent, max_redirects, tries, waitretry, timeout, warc_header, warc_cdx}{options for \code{wget}}
 
-\item{warc_file, nowarc_digests, no_warc_keep_log, warc_max_size, warc_tempdir}{options for \code{wget}}
+\item{warc_file, no_warc_keep_log, warc_max_size, warc_tempdir}{options for \code{wget}}
 
 \item{no_output}{should the URL content associated with each URL also be saved in
 individual files?}

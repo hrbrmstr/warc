@@ -13,9 +13,10 @@
 #' @examples \dontrun{
 #' cdx <- read_cdx(system.file("extdata", "20160901.cdx", package="warc"))
 #' }
-read_cdx <- function(path, warc_path=dirname(path)) {
-
+read_cdx <- function(path, warc_path=NULL) {
+  #CDX a b a m s k r M V g u
   lines <- readr::read_lines(path.expand(path))
+  if (is.null(warc_path)) warc_path <- dirname(path.expand(path))
 
   delim <- substr(lines[1], 1, 1)
 

@@ -268,7 +268,7 @@ void int_create_cdx_from_warc(std::string warc_path,
             if (strcmp("Content-Type", key) == 0) {
               strncpy(mime_type, val, KEY_VAL_MAX);
               no_space(mime_type);
-              warc_fields['m'] = std::string(warc_type);
+              warc_fields['m'] = std::string(mime_type);
             } else if (strcmp("Location", key) == 0) {
               strncpy(redirect, val, KEY_VAL_MAX);
               warc_fields['r'] = std::string(redirect);

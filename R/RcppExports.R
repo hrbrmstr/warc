@@ -24,6 +24,15 @@ gz_offset <- function(gzfile) {
     .Call('warc_gz_offset', PACKAGE = 'warc', gzfile)
 }
 
+#' Return the current raw uncompressedf offset in the file
+#'
+#' @param gzfile file handle
+#' @return offset position (integer)
+#' @export
+gz_tell <- function(gzfile) {
+    .Call('warc_gz_tell', PACKAGE = 'warc', gzfile)
+}
+
 #' Sets the starting position for the next \code{gz_read()} or \code{gz_write()}
 #'
 #' @param gzfile file handle
@@ -66,6 +75,14 @@ gz_read_char <- function(gzfile, len) {
     .Call('warc_gz_read_char', PACKAGE = 'warc', gzfile, len)
 }
 
+#' Test for end of file
+#'
+#' @export
+#' @param gzfile file handle
+gz_eof <- function(gzfile) {
+    .Call('warc_gz_eof', PACKAGE = 'warc', gzfile)
+}
+
 #' Read a line from a gz file
 #'
 #' @export
@@ -74,6 +91,16 @@ gz_read_char <- function(gzfile, len) {
 #'   on well-known formats.
 gz_gets <- function(gzfile) {
     .Call('warc_gz_gets', PACKAGE = 'warc', gzfile)
+}
+
+#' Read a line from a gz file
+#'
+#' @export
+#' @param gzfile file handle
+#' @note line buffer max is 8,192 characters. The intent of this function is to use it
+#'   on well-known formats.
+gz_gets_raw <- function(gzfile) {
+    .Call('warc_gz_gets_raw', PACKAGE = 'warc', gzfile)
 }
 
 #' Write a raw vector to a gz file
@@ -109,10 +136,11 @@ gz_flush <- function(gzfile) {
 #' Close the gz file
 #'
 #' @param gzfile file handle
-#' @param flush flush zlib buffers for the current file and terminate the gzip stream?
+#' @note if you want to properly flush the buffers and correctly terminate a gzip stream
+#'   then you \emph{must} call \code{gz_flush()} before closing the file.
 #' @export
-gz_close <- function(gzfile, flush) {
-    invisible(.Call('warc_gz_close', PACKAGE = 'warc', gzfile, flush))
+gz_close <- function(gzfile) {
+    invisible(.Call('warc_gz_close', PACKAGE = 'warc', gzfile))
 }
 
 #' Inflate a gzip stream from a file

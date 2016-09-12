@@ -42,9 +42,8 @@ XPtrGz gz_open(std::string path, std::string mode) {
   }
 
   FILE *wf = fopen(path.c_str(), fmode.c_str());
-  // if (mode == "append") fseek(wf, 0L, SEEK_END);
   gzFile gzf = gzdopen(dup(fileno(wf)), gmode.c_str());
-  gzbuffer(gzf, 32*1024);
+  gzbuffer(gzf, 64*1024);
 
   gz_fp *fp = new gz_fp;
 
@@ -63,10 +62,21 @@ XPtrGz gz_open(std::string path, std::string mode) {
 //' @return offset position (integer)
 //' @export
 // [[Rcpp::export]]
-int gz_offset(XPtrGz gzfile) {
+z_off_t gz_offset(XPtrGz gzfile) {
+  if (!gzfile) return(-1);
   return(gzoffset(gzfile->gzf));
 }
 
+//' Return the current raw uncompressedf offset in the file
+//'
+//' @param gzfile file handle
+//' @return offset position (integer)
+//' @export
+// [[Rcpp::export]]
+z_off_t gz_tell(XPtrGz gzfile) {
+  if (!gzfile) return(-1);
+  return(gztell(gzfile->gzf));
+}
 
 //' Sets the starting position for the next \code{gz_read()} or \code{gz_write()}
 //'
@@ -86,7 +96,7 @@ bool gz_fseek(XPtrGz gzfile, z_off_t offset, std::string from) {
   else if (from == "end") whence = SEEK_END;
   else if (from == "current") whence = SEEK_SET;
 
-  return(fseek(gzfile->wfp, 0L, whence) == 0);
+  return(fseek(gzfile->wfp, offset, whence) == 0);
 
 }
 
@@ -119,9 +129,10 @@ RawVector gz_read_raw(XPtrGz gzfile, unsigned len) {
   int res = gzread(gzfile->gzf, buf, len);
   if (res > 0) {
     RawVector ret(buf, buf+res);
-    free(buf);
+    if (buf) free(buf);
     return(ret);
   } else {
+    if (buf) free(buf);
     return("");
   }
 }
@@ -139,11 +150,24 @@ std::string gz_read_char(XPtrGz gzfile, unsigned len) {
   int res = gzread(gzfile->gzf, buf, len);
   if (res > 0) {
     std::string ret(buf, buf+res);
-    free(buf);
+    if (buf) free(buf);
     return(ret);
   } else {
+    if (buf) free(buf);
     return("");
   }
+}
+
+//' Test for end of file
+//'
+//' @export
+//' @param gzfile file handle
+// [[Rcpp::export]]
+bool gz_eof(XPtrGz gzfile) {
+
+  if (!gzfile) return(true);
+  return(gzeof(gzfile->gzf));
+
 }
 
 //' Read a line from a gz file
@@ -153,10 +177,36 @@ std::string gz_read_char(XPtrGz gzfile, unsigned len) {
 //' @note line buffer max is 8,192 characters. The intent of this function is to use it
 //'   on well-known formats.
 // [[Rcpp::export]]
-std::string gz_gets(XPtrGz gzfile) {
+CharacterVector gz_gets(XPtrGz gzfile) {
 
-  char buf[8*1024];
-  return(std::string(gzgets(gzfile->gzf, &buf[0], (8*1024))));
+  if (!gzfile) return("");
+  if (gzeof(gzfile->gzf)) return("");
+  char *buf = (char *)malloc(8*1024);
+  CharacterVector ret(1);
+  ret[0] = std::string(gzgets(gzfile->gzf, buf, (8*1024)));
+  if (buf) free(buf);
+  return(ret);
+
+}
+
+//' Read a line from a gz file
+//'
+//' @export
+//' @param gzfile file handle
+//' @note line buffer max is 8,192 characters. The intent of this function is to use it
+//'   on well-known formats.
+// [[Rcpp::export]]
+RawVector gz_gets_raw(XPtrGz gzfile) {
+
+  RawVector ret;
+
+  if (!gzfile) return(ret);
+  if (gzeof(gzfile->gzf)) return(ret);
+  char *buf = (char *)malloc(8*1024);
+  char *res = gzgets(gzfile->gzf, buf, (8*1024));
+  if (res != NULL) ret = RawVector(res, res+strnlen(res, 8*1024));
+  if (buf) free(buf);
+  return(ret);
 
 }
 
@@ -190,18 +240,23 @@ void gz_write_char(XPtrGz gzfile, std::string buffer) {
 //' @export
 // [[Rcpp::export]]
 void gz_flush(XPtrGz gzfile) {
-  if (gzfile) gzflush(gzfile->gzf, Z_FINISH);
+  int err=0;
+  if (gzfile) err = gzflush(gzfile->gzf, Z_FULL_FLUSH);
+  Rcout << err << " ";
+  if (gzfile) err = gzflush(gzfile->gzf, Z_FINISH);
+  Rcout << err << std::endl;
+
 }
 
 //' Close the gz file
 //'
 //' @param gzfile file handle
-//' @param flush flush zlib buffers for the current file and terminate the gzip stream?
+//' @note if you want to properly flush the buffers and correctly terminate a gzip stream
+//'   then you \emph{must} call \code{gz_flush()} before closing the file.
 //' @export
 // [[Rcpp::export]]
-void gz_close(XPtrGz gzfile, bool flush) {
+void gz_close(XPtrGz gzfile) {
   if (gzfile) {
-    if (flush) gz_flush(gzfile);
     gzclose(gzfile->gzf);
     fclose(gzfile->wfp);
   }

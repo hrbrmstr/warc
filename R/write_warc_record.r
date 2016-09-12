@@ -11,15 +11,6 @@ write_warc_record <- function(warc_rec, warc_path, compressed=FALSE, append=TRUE
 
   warc_path <- path.expand(warc_path)
 
-  # mode <- if (append) "ab" else "wb"
-  # wf <- if (compressed) gzfile(warc_path, mode) else file(warc_path, mode)
-  # cat(warc_rec$rendered_warc_header, file=wf, append=append)
-  # cat(warc_rec$rendered_response_header, file=wf, append=TRUE)
-  # if (!is.null(warc_rec$content)) writeBin(warc_rec$content, wf, useytes=TRUE)
-  # cat("\r\n\r\n", file=wf, append=TRUE) # two CRLFs after WARC record
-  # flush(wf)
-  # close(wf)
-
   rv <- c(charToRaw(warc_rec$rendered_warc_header),
           charToRaw(warc_rec$rendered_response_header))
   if (!is.null(warc_rec$content)) rv <- c(rv, warc_rec$content)
@@ -28,3 +19,28 @@ write_warc_record <- function(warc_rec, warc_path, compressed=FALSE, append=TRUE
   return(rv)
 
 }
+
+# library(warc)
+# library(httr)
+#
+# sites <- c("http://rud.is/", "http://www.zlib.net/manual.html",
+#            "http://rud.is/b", "https://iipc.github.io/warc-specifications/specifications/cdx-format/cdx-2015/",
+#            "http://rud.is/a", "http://rud.is/a/", "http://warc.readthedocs.io/en/latest/",
+#            "http://www.netpreserve.org/projects/warc-tools-project", "http://www.perceptualedge.com/blog/?p=2503",
+#            "https://ianmilligan.ca/2012/12/13/warc-files-part-two-using-warc-tools/")
+#
+# got <- map(sites, GET)
+#
+# wf <- "/tmp/a.warc.gz"
+#
+# gzf <- gz_open(wf, "write")
+#
+# map(got, as_warc) %>%
+#   flatten() %>%
+#   map(~write_warc_record(., warc_path=wf)) %>%
+#   walk(function(x) {
+#     gz_write_raw(gzf, x)
+#     gz_flush(gzf)
+#   })
+#
+# gz_close(gzf)

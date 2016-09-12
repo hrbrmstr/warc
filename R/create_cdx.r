@@ -46,3 +46,31 @@ create_cdx <- function(warc_path, warc_record_types="response",
                   field_spec=field_spec, cdx_prefix=cdx_path))
 
 }
+
+
+
+#
+# gzf <- gz_open(wf, "read")
+# repeat {
+#   start_ofs <- gz_offset(gzf)
+#   header_size <- 0
+#   raw_line <- gz_gets_raw(gzf)
+#   line <- iconv(readBin(raw_line, "character"), to="UTF-8")
+#   if (stri_detect_regex(line, "^WARC/")) {
+#     header_size <- header_size + nchar(line)
+#     warc_headers <- list()
+#     repeat {
+#       raw_line <- gz_gets_raw(gzf)
+#       line <- iconv(readBin(raw_line, "character"), to="UTF-8")
+#       if (is.na(line) || (line == "\r\n")) break
+#       header_size <- header_size + nchar(line)
+#       rec <- stri_split_regex(stri_trim(line), ": ", 2)[[1]]
+#       warc_headers[[rec[1]]] <- rec[2]
+#     }
+#     process_headers(start_ofs, start_uofs, warc_headers)
+#     if ((gz_seek(gzf, as.numeric(warc_headers$`Content-Length`)+2+2, "current") == -1) | gz_eof(gzf)) break
+#   } else {
+#     break
+#   }
+# }
+# gz_close(gzf)
