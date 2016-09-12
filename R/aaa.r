@@ -1,3 +1,5 @@
+sgzip_inflate_from_pos <- purrr::safely(gzip_inflate_from_pos)
+
 field_trans <-
   structure(
     list(

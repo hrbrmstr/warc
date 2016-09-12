@@ -99,6 +99,15 @@ std::string gz_read_char(XPtrGz gzfile, unsigned len) {
   }
 }
 
+//' @export
+// [[Rcpp::export]]
+std::string gz_gets(XPtrGz gzfile) {
+
+  char buf[1024];
+  return(std::string(gzgets(gzfile->gzf, &buf[0], 1024)));
+
+}
+
 //' Write a raw vector to a gz file
 //'
 //' @param gzfile file handle

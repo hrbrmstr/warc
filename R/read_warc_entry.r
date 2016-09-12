@@ -32,7 +32,17 @@ read_warc_entry <- function(path, start, compressed=grepl(".gz$", path)) {
   path <- path.expand(path)
 
   if (compressed) {
-    buffer <- gzip_inflate_from_pos(path, start)
+
+    buffer <- sgzip_inflate_from_pos(path, start)
+
+    if (is.null(buffer$result)) {
+
+      buffer <- rwc_the_hard_way(path, start)
+
+    } else {
+      buffer <- buffer$result
+    }
+
   } else {
 
     fil <- file(path, "rb")
