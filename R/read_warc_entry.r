@@ -36,9 +36,7 @@ read_warc_entry <- function(path, start, compressed=grepl(".gz$", path)) {
     buffer <- sgzip_inflate_from_pos(path, start)
 
     if (is.null(buffer$result)) {
-
       buffer <- rwc_the_hard_way(path, start)
-
     } else {
       buffer <- buffer$result
     }
@@ -75,5 +73,43 @@ read_warc_entry <- function(path, start, compressed=grepl(".gz$", path)) {
   }
 
   process_entry(buffer)
+
+}
+
+rwc_the_hard_way  <- function(path, start) {
+
+  w_pos <- start
+
+  gzf <- gz_open(wf, "read")
+  gz_fseek(gzf, w_pos, "start")
+
+  w_rec <- c()
+
+  repeat {
+    line <- gz_gets(gzf)
+    if (line == "\r\n") break;
+    w_rec <- c(w_rec, line)
+  }
+
+  w_ofs <- gz_offset(gzf)
+
+  gz_close(gzf, TRUE)
+
+  c_len <- grep("^Content-Length: ", w_rec, value=TRUE)
+
+  if (length(c_len) > 0) {
+
+    c_len <- as.numeric(stri_match_first_regex(c_len, " ([[:digit:]]+)")[,2])
+    gzf <- gz_open(wf, "read")
+
+    gz_fseek(gzf, w_pos, "start")
+    buffer <- gz_read_raw(gzf, sum(purrr::map_int(w_rec, nchar)) + 2 + c_len + 4)
+    gz_close(gzf, TRUE)
+
+    buffer
+
+  } else {
+    stop("Error reading WARC record from file", call.=FALSE)
+  }
 
 }

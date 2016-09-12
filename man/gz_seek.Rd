@@ -7,7 +7,9 @@
 gz_seek(gzfile, offset, from)
 }
 \arguments{
-\item{offset}{represents a number of bytes in the uncompressed data stream and the}
+\item{gzfile}{file handle}
+
+\item{offset}{represents a number of bytes in the uncompressed data stream}
 
 \item{from}{either "\code{start}" or "\code{current}"}
 }

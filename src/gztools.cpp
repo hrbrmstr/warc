@@ -67,9 +67,34 @@ int gz_offset(XPtrGz gzfile) {
   return(gzoffset(gzfile->gzf));
 }
 
+
 //' Sets the starting position for the next \code{gz_read()} or \code{gz_write()}
 //'
-//' @param offset represents a number of bytes in the uncompressed data stream and the
+//' @param gzfile file handle
+//' @param offset represents a number of bytes in the compressed data stream
+//' @param from either "\code{start}", "\code{end}" or "\code{current}"
+//' @return \code{TRUE} if successful
+//' @export
+// [[Rcpp::export]]
+bool gz_fseek(XPtrGz gzfile, z_off_t offset, std::string from) {
+
+  if (!gzfile) return(-1);
+
+  int whence = SEEK_SET;
+
+  if (from == "start") whence = SEEK_SET;
+  else if (from == "end") whence = SEEK_END;
+  else if (from == "current") whence = SEEK_SET;
+
+  return(fseek(gzfile->wfp, 0L, whence) == 0);
+
+}
+
+
+//' Sets the starting position for the next \code{gz_read()} or \code{gz_write()}
+//'
+//' @param gzfile file handle
+//' @param offset represents a number of bytes in the uncompressed data stream
 //' @param from either "\code{start}" or "\code{current}"
 //' @return the resulting offset location as measured in bytes from the beginning of the
 //'   uncompressed stream, or –1 in case of error, in particular if the file is opened
@@ -82,8 +107,30 @@ z_off_t gz_seek(XPtrGz gzfile, z_off_t offset, std::string from) {
   return(gzseek(gzfile->gzf, offset, whence));
 }
 
-//' Read from a gz file
+//' Read from a gz file into a raw vector
 //'
+//' @param gzfile file handle
+//' @param len number of of characters
+//' @export
+// [[Rcpp::export]]
+RawVector gz_read_raw(XPtrGz gzfile, unsigned len) {
+  if (!gzfile) return("");
+  unsigned char *buf = (unsigned char *)malloc(len);
+  int res = gzread(gzfile->gzf, buf, len);
+  if (res > 0) {
+    RawVector ret(buf, buf+res);
+    free(buf);
+    return(ret);
+  } else {
+    return("");
+  }
+}
+
+
+//' Read from a gz file into a character vector
+//'
+//' @param gzfile file handle
+//' @param len number of of characters
 //' @export
 // [[Rcpp::export]]
 std::string gz_read_char(XPtrGz gzfile, unsigned len) {
@@ -99,12 +146,17 @@ std::string gz_read_char(XPtrGz gzfile, unsigned len) {
   }
 }
 
+//' Read a line from a gz file
+//'
 //' @export
+//' @param gzfile file handle
+//' @note line buffer max is 8,192 characters. The intent of this function is to use it
+//'   on well-known formats.
 // [[Rcpp::export]]
 std::string gz_gets(XPtrGz gzfile) {
 
-  char buf[1024];
-  return(std::string(gzgets(gzfile->gzf, &buf[0], 1024)));
+  char buf[8*1024];
+  return(std::string(gzgets(gzfile->gzf, &buf[0], (8*1024))));
 
 }
 
