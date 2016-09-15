@@ -41,18 +41,24 @@ XPtrGz gz_open(std::string path, std::string mode) {
     Rcpp::stop("Invalid 'mode' specified");
   }
 
-  FILE *wf = fopen(path.c_str(), fmode.c_str());
-  gzFile gzf = gzdopen(dup(fileno(wf)), gmode.c_str());
-  gzbuffer(gzf, 64*1024);
+  std::string full_path(R_ExpandFileName(path.c_str()));
 
-  gz_fp *fp = new gz_fp;
+  FILE *wf = fopen(full_path.c_str(), fmode.c_str());
+  if (wf) {
+    gzFile gzf = gzdopen(dup(fileno(wf)), gmode.c_str());
+    gzbuffer(gzf, 64*1024);
 
-  fp->wfp = wf;
-  fp->gzf = gzf;
+    gz_fp *fp = new gz_fp;
 
-  XPtrGz ptr(fp);
+    fp->wfp = wf;
+    fp->gzf = gzf;
 
-  return(ptr);
+    XPtrGz ptr(fp);
+
+    return(ptr);
+  } else {
+    Rcpp::stop("Error opening file");
+  }
 
 }
 
@@ -181,9 +187,9 @@ CharacterVector gz_gets(XPtrGz gzfile) {
 
   if (!gzfile) return("");
   if (gzeof(gzfile->gzf)) return("");
-  char *buf = (char *)malloc(8*1024);
+  char *buf = (char *)malloc(4*64*1024);
   CharacterVector ret(1);
-  ret[0] = std::string(gzgets(gzfile->gzf, buf, (8*1024)));
+  ret[0] = std::string(gzgets(gzfile->gzf, buf, (4*64*1024)));
   if (buf) free(buf);
   return(ret);
 
@@ -202,9 +208,9 @@ RawVector gz_gets_raw(XPtrGz gzfile) {
 
   if (!gzfile) return(ret);
   if (gzeof(gzfile->gzf)) return(ret);
-  char *buf = (char *)malloc(8*1024);
-  char *res = gzgets(gzfile->gzf, buf, (8*1024));
-  if (res != NULL) ret = RawVector(res, res+strnlen(res, 8*1024));
+  char *buf = (char *)malloc(4*64*1024);
+  char *res = gzgets(gzfile->gzf, buf, (4*64*1024));
+  if (res != NULL) ret = RawVector(res, res+strnlen(res, 4*64*1024));
   if (buf) free(buf);
   return(ret);
 
@@ -242,10 +248,7 @@ void gz_write_char(XPtrGz gzfile, std::string buffer) {
 void gz_flush(XPtrGz gzfile) {
   int err=0;
   if (gzfile) err = gzflush(gzfile->gzf, Z_FULL_FLUSH);
-  Rcout << err << " ";
   if (gzfile) err = gzflush(gzfile->gzf, Z_FINISH);
-  Rcout << err << std::endl;
-
 }
 
 //' Close the gz file

@@ -54,65 +54,71 @@ RawVector gzip_inflate_from_pos(std::string path, size_t raw_stream_pos) {
   unsigned char in[CHUNK];
   unsigned char out[CHUNK];
 
-  FILE *source = fopen(path.c_str(), "rb");
+  std::string full_path(R_ExpandFileName(path.c_str()));
+  FILE *source = fopen(full_path.c_str(), "rb");
+  if (source) {
 
-  std::vector<unsigned char> rv;
-  rv.reserve(CHUNK);
+    std::vector<unsigned char> rv;
+    rv.reserve(CHUNK);
 
-  SET_BINARY_MODE(source);
+    SET_BINARY_MODE(source);
 
-  strm.zalloc = R_zlib_alloc;
-  strm.zfree = R_zlib_free;
-  strm.opaque = Z_NULL;
-  strm.avail_in = 0;
-  strm.next_in = Z_NULL;
+    strm.zalloc = R_zlib_alloc;
+    strm.zfree = R_zlib_free;
+    strm.opaque = Z_NULL;
+    strm.avail_in = 0;
+    strm.next_in = Z_NULL;
 
-  ret = inflateInit2(&strm, 16+MAX_WBITS);
-  if (ret != Z_OK) Rcpp::stop("Error in gzip stream");
+    ret = inflateInit2(&strm, 16+MAX_WBITS);
+    if (ret != Z_OK) Rcpp::stop("Error in gzip stream");
 
-  fseek(source, raw_stream_pos, SEEK_SET);
-
-  do {
-
-    strm.avail_in = fread(in, 1, CHUNK, source);
-    if (ferror(source)) {
-      (void)inflateEnd(&strm);
-      Rcpp::stop("Error reading from file");
-    }
-
-    if (strm.avail_in == 0) break;
-
-    strm.next_in = in;
+    fseek(source, raw_stream_pos, SEEK_SET);
 
     do {
-      strm.avail_out = CHUNK;
-      strm.next_out = out;
-      ret = inflate(&strm, Z_NO_FLUSH);
-      assert(ret != Z_STREAM_ERROR);
-      switch (ret) {
-      case Z_NEED_DICT:
-        ret = Z_DATA_ERROR;
+
+      strm.avail_in = fread(in, 1, CHUNK, source);
+      if (ferror(source)) {
         (void)inflateEnd(&strm);
-        Rcpp::stop("gzip deflate need dict error");
-        break;
-      case Z_DATA_ERROR:
-        (void)inflateEnd(&strm);
-        Rcpp::stop("gzip deflate data error");
-        break;
-      case Z_MEM_ERROR:
-        Rcpp::stop("gzip deflate memory error");
-        break;
+        Rcpp::stop("Error reading from file");
       }
-      have = CHUNK - strm.avail_out;
-      std::vector<unsigned char> tmp(out, out+have);
-      rv.insert(rv.end(), tmp.begin(), tmp.end());
-    } while (strm.avail_out == 0);
 
-  } while (ret != Z_STREAM_END);
+      if (strm.avail_in == 0) break;
 
-  (void)inflateEnd(&strm);
+      strm.next_in = in;
 
-  return(wrap(rv));
+      do {
+        strm.avail_out = CHUNK;
+        strm.next_out = out;
+        ret = inflate(&strm, Z_NO_FLUSH);
+        assert(ret != Z_STREAM_ERROR);
+        switch (ret) {
+        case Z_NEED_DICT:
+          ret = Z_DATA_ERROR;
+          (void)inflateEnd(&strm);
+          Rcpp::stop("gzip deflate need dict error");
+          break;
+        case Z_DATA_ERROR:
+          (void)inflateEnd(&strm);
+          Rcpp::stop("gzip deflate data error");
+          break;
+        case Z_MEM_ERROR:
+          Rcpp::stop("gzip deflate memory error");
+          break;
+        }
+        have = CHUNK - strm.avail_out;
+        std::vector<unsigned char> tmp(out, out+have);
+        rv.insert(rv.end(), tmp.begin(), tmp.end());
+      } while (strm.avail_out == 0);
+
+    } while (ret != Z_STREAM_END);
+
+    (void)inflateEnd(&strm);
+
+    return(wrap(rv));
+
+  } else {
+    Rcpp::stop("Error opening file");
+  }
 
 }
 

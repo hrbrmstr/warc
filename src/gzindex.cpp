@@ -61,15 +61,15 @@ char *strnstr(const char *haystack, const char *needle, size_t len) {
 #define _ISOC99_SOURCE
 #include <inttypes.h>
 
-#define BUF_LEN 1024
-#define KEY_VAL_MAX 1024
+#define BUF_LEN (64*1024)
+#define KEY_VAL_MAX (3*1024)
 #define TIME_MAX 32
 
 #define DEBUG 0
 
-#define CHUNK 16*1024*2
-
+#define CHUNK (16*1024*3)
 char *no_space(char *str) {
+
   int ct=0;
   for (int i=0; str[i]; i++)
     if (str[i] != ' ') str[ct++] = str[i];
@@ -107,7 +107,7 @@ void int_create_cdx_from_warc(std::string warc_path,
 
   if (gzf) {
 
-    res = gzbuffer(gzf, 32*1024);
+    res = gzbuffer(gzf, 64*1024);
 
     char *line;
     char *key, val[BUF_LEN];
