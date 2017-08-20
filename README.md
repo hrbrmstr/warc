@@ -1,3 +1,10 @@
+THIS WILL LIKELY BE UNDERGOING MAJOR CHANGES
+
+See: https://github.com/hrbrmstr/jwatr for a new spin on the WARC ecosystem in R
+
+The current thought is to move higher order functions to here (read/write WARC) and expose lower-level stuff via `jwatr`, but `jwatr` may also just become `warc` for a CRAN release.
+
+---------
 
 `warc` : Tools to Work with the Web Archive Ecosystem
 
